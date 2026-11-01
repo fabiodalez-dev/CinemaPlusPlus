@@ -5,19 +5,22 @@ Ogni funzione di Cinema (app web, 0.3.9) e dove sta in Cinema++. Fonte: lettura 
 Legenda: ✅ fatto · 🟡 c'è in Native Tv, da adattare · ⬜ da fare.
 
 ## Home
-- ✅ Home nativa su webOS 5, schede e righe in italiano
-- ⬜ Barra in alto come Cinema: orologio e data a sinistra, schede Cerca · Per te · Film · Serie · Musica · Scopri · Live · App, stato di Jellyfin, ingranaggio
-- ⬜ Riquadro grande: occhiello (RIPRENDI DA DOVE ERI, DALLA TUA LIBRERIA), titolo, dati, descrizione, pulsanti Apri titolo e La mia libreria
-- ⬜ Sfondo dalla libreria (backdrop del titolo a fuoco, 250 ms dopo lo spostamento)
+- ✅ Home nativa su webOS 5
+- ✅ Italiano in tutta l'app TV e nella dashboard, con inglese e spagnolo
+- 🟡 Schede Per te · Film · Serie · Musica · App · Ingressi (mancano Cerca, Scopri, Live, orologio e data a sinistra, stato di Jellyfin)
+- 🟡 Riquadro grande con titolo, dati, descrizione e copertina della libreria (mancano i pulsanti Apri titolo e La mia libreria)
+- ✅ Sfondo dalla libreria (backdrop del titolo a fuoco)
 - ⬜ Riga di scorciatoie quando Jellyfin non ha titoli
 - ⬜ Tasto giallo: Cinema ↔ vista essenziale
 
 ## Jellyfin
 - ⬜ Collegamento con Quick Connect (dalla TV e dalla dashboard); riuso di `/var/lib/launch-home-cinema/jellyfin.json`
-- ⬜ Righe: Continua a guardare (Resume + NextUp senza doppioni), Aggiunti di recente, I tuoi film, Le tue serie, La tua musica, Risultati di ricerca
-- ⬜ Copertine dal server con cache su disco, token solo nel servizio
-- ⬜ Aggiornamento ogni 10 minuti, al ritorno e a richiesta; stati offline e non autorizzato
-- ⬜ Apertura nel client preferito (LiteFin con `cinemaItemId`/`cinemaAction`, Moonfin, Jellyfin, Breezyfin, OcenFin)
+- ✅ Righe: Continua a guardare (Resume + NextUp senza doppioni), Aggiunti di recente, I tuoi film, Le tue serie, La tua musica
+- ⬜ Ricerca nella libreria
+- ✅ Copertine dal server con cache su disco (due misure, al massimo 240), token solo nel servizio
+- ✅ Aggiornamento ogni 10 minuti e a richiesta; stati offline e non autorizzato
+- ✅ Apertura in LiteFin con `cinemaItemId`/`cinemaAction`, o nel primo client installato
+- ⬜ Scelta del client preferito
 - ⬜ Scopri e Seerr (`/Litefin/Seerr/Status`), pannello con le spiegazioni
 
 ## Live e ingressi
@@ -33,7 +36,7 @@ Legenda: ✅ fatto · 🟡 c'è in Native Tv, da adattare · ⬜ da fare.
 - 🟡 Tutte le app (scheda App)
 
 ## Aspetto
-- 🟡 Sfondi (Native Tv: sfondi per fascia oraria)
+- ✅ Sfondi di Cinema nelle quattro fasce orarie di Native Tv (cielo stellato, montagne, caletta, tramonto)
 - ⬜ Sfondi di Cinema: gradienti, foto incluse, online, USB, video aerei Apple, presentazione, zoom lento, oscuramento
 - ⬜ Orologio: 12/24 h, fuso, posizione, dimensione; data in italiano
 - ⬜ Colori delle tessere, bordo, colore del focus, modalità prestazioni
