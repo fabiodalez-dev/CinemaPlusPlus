@@ -256,6 +256,21 @@ void Application::longPress() {
         homeEditStart();
     }
 }
+void Application::digit(int place) {
+    const auto &home = state_.home;
+    if (state_.screen != Screen::Home || home.editing || home.arranging || place < 1)
+        return;
+    for (const CardRow &row : home.rows)
+        if (home::isApps(row)) {
+            int seen = 0;
+            for (const Card &card : row.cards)
+                if (!card.hidden && card.id.compare(0, 9, "shortcut:") != 0 && ++seen == place) {
+                    execute(card.command);
+                    return;
+                }
+            return;
+        }
+}
 void Application::longBack() {
     if (state_.screen != Screen::Home || state_.home.arranging || state_.home.editing)
         return; // the hold is not a request for the recent apps while rows or apps are moved

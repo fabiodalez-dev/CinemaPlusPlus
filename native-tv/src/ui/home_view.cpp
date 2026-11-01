@@ -252,7 +252,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0, float fadeTop = -
                 circle.rest = rest;
                 circle.id = id;
                 circle.name = appNames || namedApps ? card.title : "";
-                circle.icon = card.id == "lg-home" ? "home" : "apps";
+                circle.icon = card.id == "lg-home" ? "home" : card.data["icon"].string("apps");
                 circle.image = card.image;
                 circle.color = appColor(card);
                 circle.named = namedApps;

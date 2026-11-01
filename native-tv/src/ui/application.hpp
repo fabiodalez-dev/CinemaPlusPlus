@@ -246,6 +246,8 @@ class Application : private ScreenHost {
     void longPress();
     // Back held: on Home it opens the recent apps, the only way to them; a tap of Back never does.
     void longBack();
+    // A number key on Home: opens the app in that place of the apps row (1 is the first).
+    void digit(int place);
     void input(const std::string &text);
     void click(float x, float y);
     bool activate(const std::string &id);

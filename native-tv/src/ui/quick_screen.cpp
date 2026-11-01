@@ -75,7 +75,8 @@ struct LayoutSwitch {
 const LayoutSwitch kSwitches[] = {{"clockFormat", "clock"}, {"appNames", "apps"},
                                   {"showLive", "tv"},       {"showInputs", "hdmi"},
                                   {"showLgHome", "home"},   {"picture", "display"},
-                                  {"showDate", "clock"},    {"dockInputs", "hdmi"}};
+                                  {"showDate", "clock"},    {"dockInputs", "hdmi"},
+                                  {"appShortcuts", "apps"}};
 const char *kSleep[] = {"off", "10", "30", "60", "90", "120"};
 
 double clamp(double value, double low, double high) {
@@ -534,6 +535,7 @@ class QuickScreen final : public ScreenView {
                 {"clockFormat", msg("tv.quick.clock24", "24-hour clock")},
                 {"showDate", msg("tv.quick.showDate", "Date under the clock")},
                 {"dockInputs", msg("tv.quick.dockInputs", "Inputs row on Home")},
+                {"appShortcuts", msg("tv.quick.appShortcuts", "All apps and TV settings tiles")},
                 {"appNames", msg("tv.quick.appNames", "App names")},
                 {"showLive", msg("tv.quick.showLive", "Live tab")},
                 {"showInputs", msg("tv.quick.showInputs", "Inputs tab")},

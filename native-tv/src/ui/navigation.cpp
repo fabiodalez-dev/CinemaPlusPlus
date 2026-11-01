@@ -56,6 +56,19 @@ void Application::route(const std::string &path) {
     if (path.compare(0, 4, "kit:") == 0) {
         state_.screen = Screen::Kit;
         state_.kitComponent = path.substr(4);
+    } else if (path.compare(0, 9, "home:tab:") == 0) {
+        // A tile that opens one of Home's tabs (All apps opens Apps).
+        state_.screen = Screen::Home;
+        for (size_t i = 0; i < state_.home.tabs.size(); ++i)
+            if (state_.home.tabs[i].key == path.substr(9)) {
+                state_.home.tab = i;
+                state_.home.nav = i;
+            }
+        state_.home.row = 0;
+        state_.home.column = 0;
+        rebuildHome();
+        homeStart();
+        homeData();
     } else if (path == "home" || path == "home:resume") {
         state_.screen = Screen::Home;
         // Coming back from the recents or an overlay keeps the page as it was; any other screen

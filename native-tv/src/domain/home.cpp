@@ -319,6 +319,26 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     // The apps lead, as on Google TV, in their kinds' order when sorted by kind; the top picks
     // follow and the hero is drawn from them.
     CardRow apps = appsRow(catalogue, guide, false);
+    // Cinema's dock ends with All apps and the TV's own settings.
+    if (!apps.cards.empty() && catalogue["layout"]["appShortcuts"].boolean()) {
+        Card all;
+        all.id = "shortcut:apps";
+        all.kind = "app";
+        all.title = say::msg("tv.home.allApps", "All apps");
+        all.data = Json::object();
+        all.data.set("icon", Json::text("apps"));
+        all.command = navigate("home:tab:apps");
+        apps.cards.push_back(all);
+        Card settings;
+        settings.id = "shortcut:settings";
+        settings.kind = "app";
+        settings.title = say::msg("tv.home.tvSettings", "TV settings");
+        settings.data = Json::object();
+        settings.data.set("icon", Json::text("settings"));
+        settings.command = post(Operation::OpenHomeItem,
+                                fields({{"kind", Json::text("settings")}, {"id", Json::text("settings")}}));
+        apps.cards.push_back(settings);
+    }
     if (!apps.cards.empty())
         result.push_back(apps);
     // Cinema's wide dock: the HDMI inputs under the apps, one with nothing on it

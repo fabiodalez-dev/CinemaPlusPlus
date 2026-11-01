@@ -92,7 +92,7 @@ HeroText linesOf(const ViewState &state, const Card &card) {
     if (isTitle(card)) {
         text.source = rowTitleOf(state, card);
         if (text.source.empty())
-            text.source = card.kind == "youtube" ? "YouTube" : "Top picks for you";
+            text.source = card.kind == "youtube" ? "YouTube" : say::msg("tv.home.row.trending", "Top picks for you");
         text.facts = card.subtitle.empty() && card.kind == "youtube" ? "YouTube" : card.subtitle;
         text.description = card.data["overview"].string();
     } else if (card.kind == "dev" || card.kind == "ch") {
@@ -102,10 +102,10 @@ HeroText linesOf(const ViewState &state, const Card &card) {
         text.hint = card.kind == "dev" ? say::msg("tv.home.hero.switch", "Switch")
                                        : say::msg("tv.home.hero.watch", "Watch");
     } else {
-        text.source = card.id == "lg-home" ? "LG Home" : "Your apps";
+        text.source = card.id == "lg-home" ? "LG Home" : say::msg("tv.home.row.yourApps", "Your apps");
         text.facts = card.data["description"].string();
         text.image = card.image;
-        text.hint = "Open";
+        text.hint = say::msg("tv.home.hero.open", "Open");
     }
     return text;
 }

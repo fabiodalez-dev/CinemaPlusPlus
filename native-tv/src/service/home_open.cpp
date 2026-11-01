@@ -60,6 +60,11 @@ HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
     plan.error = say::msg("srv.home.unknownTile",
                           "that is not on Native Tv Home");
 
+    if (kind == "settings") {
+        // The TV's own settings, from the dock's last tile.
+        setLaunch(plan, "com.palm.app.settings");
+        return plan;
+    }
     if (kind == "app") {
         const Json hit = findListed(apps, id);
         if (!hit.valid()) return plan;

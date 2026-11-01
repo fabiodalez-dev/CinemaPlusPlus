@@ -521,6 +521,11 @@ int main(int argc, char **argv) {
                             key = event.key.keysym.scancode == 480 ? Key::PageUp : Key::PageDown;
                             known = true;
                         }
+                        // The remote's numbers open the apps on Home by their place, as on Cinema.
+                        const SDL_Keycode digit = event.key.keysym.sym;
+                        if (!known && !event.key.repeat && digit >= SDLK_1 && digit <= SDLK_9 &&
+                            app.screenName() == "home")
+                            app.digit(static_cast<int>(digit - SDLK_0));
                         if (known) {
                             if (key == Key::Ok) {
                                 if (!okDown && !event.key.repeat) {
