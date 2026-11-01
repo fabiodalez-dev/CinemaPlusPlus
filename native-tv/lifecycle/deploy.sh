@@ -75,7 +75,7 @@ SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=accept-n
 [ -n "${NATIVETV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$NATIVETV_KNOWN_HOSTS")
 STAGE=/var/lib/tvweb/.deploy     # on the TV; beside the install so moves are renames
 
-FILES="tvwebctl assets/ui.html assets/favicon.svg \
+FILES="tvwebctl 56-cinemapp-ledstrip assets/ui.html assets/favicon.svg \
 assets/ui/theme.css assets/ui/ui.css assets/ui/i18n.js assets/ui/core.js assets/ui/theme.js assets/ui/format.js assets/ui/readouts.js \
 assets/ui/server.js assets/ui/controls.js assets/ui/privacy.js assets/ui/lgsettings.js assets/ui/game.js \
 assets/ui/system.js assets/ui/history.js assets/ui/ssh.js assets/ui/screentime.js assets/ui/apps.js assets/ui/install.js assets/ui/home.js assets/ui/tabs.js assets/ui/servicemenu.js \
@@ -211,6 +211,15 @@ chmod +x "\$D/tvwebctl"
 rm -rf "\$D/tvweb.js" "\$D/lib"
 if [ -f "\$D/native/nativetv-service" ] && [ -f "\$D/native/nativetv-daemon" ]; then
   chmod 755 "\$D/native/nativetv-daemon" "\$D/native/nativetv-service" || fail "could not make native runtimes executable"
+fi
+# Cinema++: the LED strip's process at boot, whatever --no-persist says: it
+# starts only that, late and in the background, and only for a strip set to
+# follow the screen.
+if [ -f "\$D/56-cinemapp-ledstrip" ]; then
+  mkdir -p /var/lib/webosbrew/init.d
+  cp "\$D/56-cinemapp-ledstrip" /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new &&
+    chmod 755 /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new &&
+    mv -f /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new /var/lib/webosbrew/init.d/56-cinemapp-ledstrip
 fi
 if [ -n "$PERSIST" ]; then
   mkdir -p /var/lib/webosbrew/init.d

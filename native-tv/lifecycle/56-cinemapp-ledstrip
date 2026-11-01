@@ -1,0 +1,16 @@
+#!/bin/sh
+# Cinema++ boot hook: start the LED strip's process (nativetv-ambilight) when
+# config.json has a strip set to follow the screen. Only that: the rest of
+# Native Tv is started by its own hook when that is installed. In the
+# background and late, so it never holds up the boot; the process locks
+# itself, so a second start from the daemon does nothing.
+# Install to /var/lib/webosbrew/init.d/56-cinemapp-ledstrip (no dot in the name).
+BIN=/var/lib/tvweb/native/nativetv-ambilight
+[ -x "$BIN" ] || exit 0
+grep -q '"follow": *true' /var/lib/tvweb/config.json 2>/dev/null || exit 0
+(
+  sleep 25
+  PATH=/usr/sbin:/usr/bin:/sbin:/bin LD_LIBRARY_PATH=/var/lib/tvweb/native TVWEB_DATA_DIR=/var/lib/tvweb \
+    setsid "$BIN" daemon </dev/null >/dev/null 2>&1 &
+) </dev/null >/dev/null 2>&1 &
+exit 0
