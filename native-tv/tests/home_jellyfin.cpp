@@ -90,6 +90,10 @@ int main() {
         check(jf.image(std::string(kUser) + ":Backdrop:1280", bytes) && bytes == "JPEG", "artwork again");
         check(asked["http://jf.local:8096/Items/" + std::string(kUser) + "/Images/Backdrop/0"] == before, "from the disk cache");
         check(!jf.image("../etc:Backdrop:1280", bytes) && !jf.image(std::string(kUser) + ":Logo:100", bytes), "bad specs refused");
+        // Any other width is served at one of the two sizes, never a new file.
+        const int asked1280 = asked["http://jf.local:8096/Items/" + std::string(kUser) + "/Images/Backdrop/0"];
+        check(jf.image(std::string(kUser) + ":Backdrop:1919", bytes), "an odd width");
+        check(asked["http://jf.local:8096/Items/" + std::string(kUser) + "/Images/Backdrop/0"] == asked1280, "served from the 1280 file");
     }
     // Without a connection: unconfigured.
     {

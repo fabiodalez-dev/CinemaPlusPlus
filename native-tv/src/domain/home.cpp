@@ -95,8 +95,19 @@ std::string pictureLabel(const Json &picture) {
     }
     return text;
 }
-std::vector<Tab> homeTabs(const Json &catalogue) {
+std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover) {
     std::vector<Tab> tabs = {{"home", say::msg("tv.home.tab.home", "Home"), Operation::None}};
+    // Cinema's tabs for the Jellyfin library: Film, Serie, Musica, when the server has them.
+    bool has[3] = {false, false, false};
+    for (const auto &row : discover["rows"].items()) {
+        const std::string key = row["key"].string();
+        has[0] = has[0] || key == "jf-movies";
+        has[1] = has[1] || key == "jf-series";
+        has[2] = has[2] || key == "jf-music";
+    }
+    if (has[0]) tabs.push_back({"movies", say::msg("tv.home.tab.movies", "Films"), Operation::None});
+    if (has[1]) tabs.push_back({"series", say::msg("tv.home.tab.series", "Series"), Operation::None});
+    if (has[2]) tabs.push_back({"music", say::msg("tv.home.tab.music", "Music"), Operation::None});
     if (catalogue["layout"]["showLive"].boolean() &&
         catalogue["sources"]["channels"].number(-1) != 0)
         tabs.push_back({"live", say::msg("tv.home.tab.live", "Live"), Operation::None});
@@ -230,6 +241,39 @@ std::vector<std::string> orderAfterMove(const Json &order, const std::vector<std
             result.push_back(shown[next]);
     return result;
 }
+// A row of the Jellyfin library: cards that open the title in the Jellyfin app.
+CardRow jellyfinRow(const std::string &key, const std::string &title, const Json &source) {
+    CardRow row;
+    row.key = key;
+    row.title = title;
+    for (const auto &item : source["items"].items()) {
+        Card card;
+        card.id = item["id"].string();
+        card.kind = "jellyfin";
+        card.data = item;
+        card.title = item["title"].string();
+        if (item["remaining"].isNumber()) {
+            Json vars = Json::object();
+            vars.set("n", Json::text(std::to_string(int(item["remaining"].number()))));
+            card.subtitle = say::msg("tv.home.jf.remaining", "{n} min left", vars);
+        } else if (item["episode"].isString()) {
+            card.subtitle = (item["season"].isNumber() ? "S" + std::to_string(int(item["season"].number())) + " · " : std::string()) +
+                            (item["number"].isNumber() ? "E" + std::to_string(int(item["number"].number())) + " · " : std::string()) +
+                            item["episode"].string();
+        } else {
+            std::string facts = item["year"].isNumber() ? std::to_string(int(item["year"].number())) : "";
+            if (item["genres"].size()) facts += (facts.empty() ? "" : " · ") + item["genres"][0].string();
+            card.subtitle = facts;
+        }
+        if (item["image"].isString()) card.image = "jellyfin:" + item["image"].string() + ":640";
+        if (item["backdrop"].isString()) card.backdrop = "jellyfin:" + item["backdrop"].string() + ":1280";
+        card.command = post(Operation::OpenHomeItem,
+                            fields({{"kind", Json::text("jellyfin")}, {"id", item["id"]},
+                                    {"action", Json::text(item["progress"].number() > 0 ? "resume" : "details")}}));
+        row.cards.push_back(card);
+    }
+    return row;
+}
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide) {
     std::vector<CardRow> result;
@@ -237,6 +281,18 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         for (const CardRow &row : appRows(catalogue, guide, "appsTab"))
             if (!row.cards.empty())
                 result.push_back(row);
+        return result;
+    }
+    if (tab == "movies" || tab == "series" || tab == "music") {
+        const std::string key = "jf-" + tab;
+        for (const auto &source : discover["rows"].items())
+            if (source["key"].string() == key) {
+                CardRow row = jellyfinRow(key, tab == "movies" ? say::msg("tv.home.row.jfMovies", "Your films")
+                                               : tab == "series" ? say::msg("tv.home.row.jfSeries", "Your series")
+                                                                 : say::msg("tv.home.row.jfMusic", "Your music"), source);
+                if (!row.cards.empty())
+                    result.push_back(row);
+            }
         return result;
     }
     if (tab == "inputs" || tab == "live") {
@@ -269,36 +325,7 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     for (const auto &key : {"jf-continue", "jf-recent", "jf-movies", "jf-series", "jf-music"}) {
         if (!feedRows.count(key))
             continue;
-        const Json source = feedRows[key];
-        CardRow row;
-        row.key = key;
-        row.title = library.at(key);
-        for (const auto &item : source["items"].items()) {
-            Card card;
-            card.id = item["id"].string();
-            card.kind = "jellyfin";
-            card.data = item;
-            card.title = item["title"].string();
-            if (item["remaining"].isNumber()) {
-                Json vars = Json::object();
-                vars.set("n", Json::text(std::to_string(int(item["remaining"].number()))));
-                card.subtitle = say::msg("tv.home.jf.remaining", "{n} min left", vars);
-            } else if (item["episode"].isString()) {
-                card.subtitle = (item["season"].isNumber() ? "S" + std::to_string(int(item["season"].number())) + " · " : std::string()) +
-                                (item["number"].isNumber() ? "E" + std::to_string(int(item["number"].number())) + " · " : std::string()) +
-                                item["episode"].string();
-            } else {
-                std::string facts = item["year"].isNumber() ? std::to_string(int(item["year"].number())) : "";
-                if (item["genres"].size()) facts += (facts.empty() ? "" : " · ") + item["genres"][0].string();
-                card.subtitle = facts;
-            }
-            if (item["image"].isString()) card.image = "jellyfin:" + item["image"].string() + ":640";
-            if (item["backdrop"].isString()) card.backdrop = "jellyfin:" + item["backdrop"].string() + ":1280";
-            card.command = post(Operation::OpenHomeItem,
-                                fields({{"kind", Json::text("jellyfin")}, {"id", item["id"]},
-                                        {"action", Json::text(item["progress"].number() > 0 ? "resume" : "details")}}));
-            row.cards.push_back(card);
-        }
+        CardRow row = jellyfinRow(key, library.at(key), feedRows[key]);
         if (!row.cards.empty())
             result.push_back(row);
     }

@@ -7,6 +7,9 @@
 #include <cstdio>
 #include <curl/curl.h>
 #include <fstream>
+#include <vector>
+#include <fcntl.h>
+#include <dirent.h>
 #include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -50,6 +53,27 @@ bool curlGet(const std::string &url, const std::string &authorization, std::stri
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     return code == CURLE_OK;
+}
+
+constexpr size_t kMaxArtwork = 240;
+
+// The library's pictures in the cache folder ("jf-*.jpg"), oldest removed past
+// the cap.
+void pruneArtwork(const std::string &dir) {
+    std::vector<std::pair<time_t, std::string>> files;
+    if (DIR *folder = opendir(dir.c_str())) {
+        while (const dirent *entry = readdir(folder)) {
+            const std::string name = entry->d_name;
+            if (name.compare(0, 3, "jf-") != 0) continue;
+            struct stat st;
+            if (lstat((dir + "/" + name).c_str(), &st) == 0 && S_ISREG(st.st_mode))
+                files.push_back({st.st_mtime, name});
+        }
+        closedir(folder);
+    }
+    if (files.size() < kMaxArtwork) return;
+    std::sort(files.begin(), files.end());
+    for (size_t i = 0; i + kMaxArtwork <= files.size(); ++i) std::remove((dir + "/" + files[i].second).c_str());
 }
 
 std::string readText(const std::string &path) {
@@ -225,9 +249,11 @@ void HomeJellyfin::refresh() {
         const Json next = items(c, "/Shows/NextUp?UserId=" + c.userId + common, sNext);
         const std::string latest = "?Recursive=true&SortBy=DateCreated&SortOrder=Descending";
         const Json all = items(c, user + latest + "&IncludeItemTypes=Movie,Series" + common, sAll);
-        const Json movies = items(c, user + latest + "&IncludeItemTypes=Movie" + common, sMovies);
-        const Json series = items(c, user + latest + "&IncludeItemTypes=Series" + common, sSeries);
-        const Json music = items(c, user + latest + "&IncludeItemTypes=MusicAlbum" + common, sMusic);
+        // The Film, Serie and Musica tabs show these: more than Home's twelve.
+        const std::string many = std::string("&") + kFields + "&Limit=36";
+        const Json movies = items(c, user + latest + "&IncludeItemTypes=Movie" + many, sMovies);
+        const Json series = items(c, user + latest + "&IncludeItemTypes=Series" + many, sSeries);
+        const Json music = items(c, user + latest + "&IncludeItemTypes=MusicAlbum" + many, sMusic);
         Json rows = Json::array();
         const Json cont = mergeContinue(resume, next);
         if (cont.size()) rows.add(row("jf-continue", cont));
@@ -305,7 +331,9 @@ bool HomeJellyfin::image(const std::string &spec, std::string &bytes) {
     const std::string id = spec.substr(0, a), type = spec.substr(a + 1, b - a - 1);
     int width = std::atoi(spec.substr(b + 1).c_str());
     if (!hexId(id) || (type != "Primary" && type != "Backdrop" && type != "Thumb")) return false;
-    width = std::max(160, std::min(1920, width));
+    // Only the two sizes Home draws: any other width would be one more file on
+    // the TV's flash for anyone who can reach the dashboard.
+    width = width > 640 ? 1280 : 640;
     const std::string dir = dataRoot_ + "/home-images";
     mkdir(dir.c_str(), 0700);
     const std::string file = dir + "/jf-" + id + "-" + type + "-" + std::to_string(width) + ".jpg";
@@ -321,8 +349,15 @@ bool HomeJellyfin::image(const std::string &spec, std::string &bytes) {
         bytes.clear();
         return false;
     }
-    std::ofstream out(file, std::ios::binary | std::ios::trunc);
-    out << bytes;
+    // At most kMaxArtwork pictures of the library: the oldest go first.
+    pruneArtwork(dir);
+    const std::string tmp = file + ".tmp";
+    const int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+    if (fd >= 0) {
+        const bool written = write(fd, bytes.data(), bytes.size()) == ssize_t(bytes.size());
+        close(fd);
+        if (!written || std::rename(tmp.c_str(), file.c_str()) != 0) std::remove(tmp.c_str());
+    }
     return true;
 }
 

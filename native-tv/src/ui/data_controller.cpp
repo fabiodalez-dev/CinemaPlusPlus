@@ -8,7 +8,7 @@ void Application::rebuildHome() {
     // The cards being moved are the person's own order until it is saved.
     if (state_.home.editing)
         return;
-    state_.home.tabs = homeTabs(state_.catalogue);
+    state_.home.tabs = homeTabs(state_.catalogue, state_.discover);
     auto &home = state_.home;
     home.tab = clampIndex(home.tab, home.tabs.size());
     std::string oldId;

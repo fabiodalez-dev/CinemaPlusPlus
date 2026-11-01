@@ -54,7 +54,7 @@ struct Tab {
     std::string key, title;
     Operation operation = Operation::None;
 };
-std::vector<Tab> homeTabs(const Json &catalogue);
+std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover = Json());
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide);
 // The ids hidden from a list of the layout: "app" (Home's apps), "dev", "ch", or "appsTab" (the Apps
