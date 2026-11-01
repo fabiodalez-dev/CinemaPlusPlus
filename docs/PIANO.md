@@ -29,13 +29,21 @@ Molti esistono già in Native Tv: privacy e accordi sui dati, debloat dei serviz
 - aggiornamenti di Cinema++ e Bloomee dalle release GitHub con verifica SHA-256;
 - controllo del canale Homebrew e modalità di emergenza.
 
+Stato al 1° novembre 2026:
+
+- **App tenute in memoria**: nel servizio C++ (`service/memory_keep`, `daemon/memory_keeper`) e nella dashboard, scheda App → «Apps kept open». Usa lo stesso segno di Cinema per il file di memchute, quindi le due convivono; provato sulla TV aggiungendo e togliendo YouTube.
+- **ID pubblicitario, avvisi sportivi, LG Channels**: aggiunti alle impostazioni LG di Native Tv (gruppo promozioni).
+- **Spegnimento a un orario**: non serve riscriverlo. Su webOS 5 il timer di spegnimento di LG non c'è, ma l'ora di andare a letto di Native Tv (Tempo davanti alla TV) spegne la TV con un avviso 5 minuti prima: le 02:00 di Cinema diventano una fascia dalle 02:00 alle 02:01 con azione «spegni».
+- **Già in Native Tv**: precaricamento, servizi in background, accordi sui dati e Live Plus, tasti del telecomando, blocco degli aggiornamenti di LG, pubblicità.
+- **Restano a Cinema fino al passaggio**: riavvio di memchute all'accensione (l'hook `45-cinema-tvtools-memory`), aggiornamenti di Cinema e Bloomee, controllo del canale Homebrew.
+
 ### 2. Striscia LED in C++
 
 Il controller di Cinema (`ambilight.py`) riscritto nel servizio:
 
 - cattura dello schermo con `com.webos.service.capture` in un thread suo, dissolvenze a 20 fotogrammi al secondo;
 - colori della 0.3.9: tinta dominante mescolata con la scena, curva fra i canali, bianco corretto verso il caldo;
-- scritture GATT su ELK-BLEDOM attraverso un solo client del bus;
+- scritture GATT su ELK-BLEDOM attraverso un solo client del bus: il `LunaClient` di Native Tv apre un `luna-send` per ogni chiamata, che sul servizio Bluetooth di LG fa perdere un file a ogni comando (vedi Cinema 0.3.9);
 - luce della stanza all'annuncio di spegnimento di LG, registro persistente, riavvio del Bluetooth bloccato al massimo ogni due minuti;
 - impostazioni nella dashboard e nell'app TV: Cerca, Prova, Salva, luminosità separate.
 

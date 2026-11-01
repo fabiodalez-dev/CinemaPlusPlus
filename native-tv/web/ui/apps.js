@@ -253,6 +253,7 @@ function renderAppsPanel() {
   }
 
   renderPreload(d);
+  renderMemory(d);
   renderQuickAccess(d);
   renderRemoteKeys(d);
   renderHomeScreen(d);
@@ -822,6 +823,60 @@ function renderPreload(d) {
     disabled: !d.writable,
     onclick: "togglePreload('" + jsq(a.id) + "', " + (!a.off) + ")"
   })).join('')}</div>`;
+}
+
+function renderMemory(d) {
+  const disc = q('disc-memory');
+  const list = q('apps-memory-list');
+  const summary = q('apps-memory-summary');
+  const apps = d.memory || [];
+  if (!disc) return;
+  disc.hidden = !apps.length;
+  if (!apps.length) return;
+  const kept = apps.filter(a => a.kept).length;
+  if (summary) {
+    summary.textContent = kept === 1
+      ? t('apps.memory.one', '1 kept open')
+      : t('apps.memory.count', '{n} kept open', { n: kept });
+  }
+  if (!list) return;
+  list.innerHTML = `<div class="rk-grid">${apps.map(a => toggleTile({
+    id: 'btn-memory-' + a.id,
+    appId: a.id,
+    name: a.title,
+    note: '',
+    state: a.kept ? t('apps.memory.kept', 'Kept open') : t('apps.memory.closed', 'Closed by LG'),
+    dim: !a.kept,
+    changed: a.kept,
+    disabled: !d.writable,
+    onclick: "toggleMemory('" + jsq(a.id) + "', " + (!a.kept) + ")"
+  })).join('')}</div>`;
+}
+
+async function toggleMemory(appId, keep) {
+  const btn = q('btn-memory-' + appId);
+  markBusy(btn);
+  let error = null;
+  try {
+    const res = await fetch(api('/api/memory/toggle'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: appId, keep })
+    });
+    const d = await res.json();
+    if (d && d.ok) {
+      const item = appsData && (appsData.memory || []).find(a => a.id === appId);
+      if (item) item.kept = keep;
+    } else {
+      error = (d && d.error) || t('common.unknownError', 'unknown error');
+    }
+  } catch (e) {
+    error = e.message;
+  } finally {
+    if (btn) btn.classList.remove('busy');
+  }
+  if (appsData) renderMemory(appsData);
+  if (error) alert(t('apps.memory.failed', 'Could not change it: {error}', { error }));
 }
 
 async function togglePreload(appId, makeOff) {

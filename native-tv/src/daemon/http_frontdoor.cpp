@@ -57,6 +57,8 @@
 #include "service/piccap.hpp"
 #include "service/quick_access.hpp"
 #include "service/preload.hpp"
+#include "service/memory_keep.hpp"
+#include "daemon/memory_keeper.hpp"
 #include "service/control_commands.hpp"
 #include "service/config_settings.hpp"
 #include "service/remote_input.hpp"
@@ -4308,6 +4310,14 @@ Json HttpFrontDoor::appsRuntimeContext(const Json &appsReply,
                 loaded.found ? loaded.value : Json::object());
         }
         context.set("preload", preload);
+    }
+
+    {   // Kept in memory: the apps LG's memory manager does not close when
+        // another opens (Cinema's keepInMemory).
+        JsonFile configFile(configPath_);
+        const JsonFileResult loaded = configFile.load();
+        context.set("memory", service::memoryApps(
+            appsReply["apps"], loaded.found ? loaded.value["keepInMemory"] : Json()));
     }
 
     {   // Quick Access: the nine keys and what each can be set to.
@@ -10808,6 +10818,89 @@ void HttpFrontDoor::setRemoteKey(HttpExchange &exchange) const {
                            {{"Content-Type", "application/json"},
                             {"Cache-Control", "no-store"}},
                            "{\"ok\":true}");
+}
+
+void HttpFrontDoor::setMemoryToggle(HttpExchange &exchange) const {
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    const auto fail = [&respond](int status, const std::string &error) {
+        Json response = Json::object();
+        response.set("ok", Json::flag(false));
+        response.set("error", Json::text(error));
+        respond(status, response);
+    };
+    const HttpRequest &request = exchange.request();
+    if (!setupJsonContentType(request)) {
+        fail(415, "Content-Type must be application/json");
+        return;
+    }
+    if (!sameOriginRequest(request)) {
+        fail(403, "cross-origin request refused");
+        return;
+    }
+    if (!exchange.setBodyLimit(4096)) {
+        sendSetupError(exchange, 413, "request body too large", true);
+        return;
+    }
+    std::string body;
+    char buffer[1024];
+    for (;;) {
+        const int count = exchange.readBody(buffer, sizeof(buffer));
+        if (count == 0)
+            break;
+        if (count < 0) {
+            sendSetupError(exchange, exchange.bodyLimitExceeded() ? 413 : 400,
+                           exchange.bodyLimitExceeded() ? "request body too large"
+                                                        : "invalid request body",
+                           true);
+            return;
+        }
+        body.append(buffer, static_cast<size_t>(count));
+    }
+    const Json payload = Json::parse(body);
+    if (!payload.isObject() || !payload["id"].isString() || !payload["keep"].isBoolean() ||
+        !service::memoryAppIdValid(payload["id"].string())) {
+        fail(400, "id and keep expected");
+        return;
+    }
+    const std::string id = payload["id"].string();
+    const bool keep = payload["keep"].boolean();
+    JsonFile configFile(configPath_);
+    const JsonFileResult loaded = configFile.load();
+    Json list = Json::array();
+    bool present = false;
+    if (loaded.found && loaded.value["keepInMemory"].isArray())
+        for (const Json &item : loaded.value["keepInMemory"].items()) {
+            if (!item.isString()) continue;
+            if (item.string() == id) {
+                present = true;
+                if (!keep) continue;
+            }
+            list.add(item);
+        }
+    if (keep && !present) list.add(Json::text(id));
+    Json change = Json::object();
+    change.set("keepInMemory", list);
+    std::string error;
+    if (!ConfigStore(configPath_).setTopLevel(change, &error)) {
+        fail(500, "could not save setting: " + error);
+        return;
+    }
+    // Written now, counted by LG's memory manager from the next restart.
+    Logger *logger = logger_;
+    (void)applyMemoryKeep(systemRoot_, list, [logger](const std::string &message) {
+        if (logger) logger->info(message);
+    });
+    Json response = Json::object();
+    response.set("ok", Json::flag(true));
+    response.set("keepInMemory", list);
+    response.set("fromNextRestart", Json::flag(true));
+    respond(200, response);
 }
 
 void HttpFrontDoor::setPreloadToggle(HttpExchange &exchange) const {
@@ -17452,7 +17545,7 @@ void HttpFrontDoor::sendApps(HttpExchange &exchange) const {
                                            state, config_.allowControl);
     static const char *contextFields[] = {
         "tileHidingAvailable", "tileHidingHeld", "tileHidingOverridden",
-        "tileHidingNudge", "nativeTvHome", "services", "preload",
+        "tileHidingNudge", "nativeTvHome", "services", "preload", "memory",
         "quickAccess", "remoteKeys", "homeScreen"
     };
     for (const char *field : contextFields)
@@ -18617,6 +18710,16 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
                                 {"X-Content-Type-Options", "nosniff"},
                                 {"Referrer-Policy", "no-referrer"}},
                                response.dump());
+        return;
+    }
+    if (request.uri == "/api/memory/toggle" && request.method == "POST") {
+        if (!config_.allowControl) {
+            sendSetupError(exchange, 403, say::msg("srv.controlsOff", "controls disabled in config"));
+            return;
+        }
+        if (rejectCrossSitePost(exchange))
+            return;
+        setMemoryToggle(exchange);
         return;
     }
     if (request.uri == "/api/preload/toggle" && request.method == "POST") {

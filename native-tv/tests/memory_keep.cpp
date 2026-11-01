@@ -51,9 +51,22 @@ void testPlan() {
     check(planMemoryKeep(true, lg(), true, lg(), false, {}).action ==
               MemoryKeepPlan::Nothing, "empty list, not ours: left");
 }
+void testTheAppsOfferedKeptFirst() {
+    const Json installed = Json::parse(
+        "[{\"id\":\"youtube.leanback.v4\",\"title\":\"YouTube\"},"
+        "{\"id\":\"org.bloomee.webos\",\"title\":\"Bloomee\"},"
+        "{\"id\":\"com.webos.app.hidden\",\"title\":\"Hidden\",\"visible\":false},"
+        "{\"id\":\"com.webos.app.container.x\",\"title\":\"Box\"},"
+        "{\"id\":\"com.webos.app.browser\",\"title\":\"Browser\"}]");
+    const Json apps = memoryApps(installed, Json::parse("[\"org.bloomee.webos\"]"));
+    check(apps.size() == 3, "hidden apps and containers left out");
+    check(apps[0]["id"].string() == "org.bloomee.webos" && apps[0]["kept"].boolean(), "kept first");
+    check(apps[1]["title"].string() == "Browser" && !apps[1]["kept"].boolean(), "then by title");
+}
 } // namespace
 
 int main() {
+    testTheAppsOfferedKeptFirst();
     testTheAppsAreAddedOnceAfterLgsOwn();
     testInvalidIdsAreIgnored();
     testPlan();

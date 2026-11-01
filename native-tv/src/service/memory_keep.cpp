@@ -97,5 +97,42 @@ MemoryKeepPlan planMemoryKeep(bool systemExists, const Json &system,
     return plan;
 }
 
+Json memoryApps(const Json &installed, const Json &keepInMemory) {
+    std::vector<std::string> keep;
+    if (keepInMemory.isArray())
+        for (const Json &item : keepInMemory.items())
+            if (item.isString()) keep.push_back(item.string());
+    struct Entry { std::string id, title; bool kept; };
+    std::vector<Entry> entries;
+    std::vector<std::string> seen;
+    if (installed.isArray()) {
+        for (const Json &app : installed.items()) {
+            if (!app.isObject() || !app["id"].isString()) continue;
+            const std::string id = app["id"].string();
+            const bool hidden = app["visible"].isBoolean() && !app["visible"].boolean();
+            if (hidden || !memoryAppIdValid(id) || id.compare(0, 23, "com.webos.app.container") == 0)
+                continue;
+            if (std::find(seen.begin(), seen.end(), id) != seen.end()) continue;
+            seen.push_back(id);
+            const std::string title = app["title"].isString() && !app["title"].string().empty()
+                                          ? app["title"].string() : id;
+            entries.push_back({id, title, std::find(keep.begin(), keep.end(), id) != keep.end()});
+        }
+    }
+    std::stable_sort(entries.begin(), entries.end(), [](const Entry &a, const Entry &b) {
+        if (a.kept != b.kept) return a.kept;
+        return a.title < b.title;
+    });
+    Json out = Json::array();
+    for (const Entry &e : entries) {
+        Json item = Json::object();
+        item.set("id", Json::text(e.id));
+        item.set("title", Json::text(e.title));
+        item.set("kept", Json::flag(e.kept));
+        out.add(item);
+    }
+    return out;
+}
+
 } // namespace service
 } // namespace nativetv

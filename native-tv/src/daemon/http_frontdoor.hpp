@@ -378,6 +378,7 @@ class HttpFrontDoor {
     void setQuickAccess(HttpExchange &exchange) const;
     void setRemoteKey(HttpExchange &exchange) const;
     void setPreloadToggle(HttpExchange &exchange) const;
+    void setMemoryToggle(HttpExchange &exchange) const;
     void sendDashboardSettings(HttpExchange &exchange) const;
     void setDashboardSettings(HttpExchange &exchange) const;
     bool createBackup(Json &backup, const Json *settingsContext = nullptr) const;

@@ -37,5 +37,9 @@ MemoryKeepPlan planMemoryKeep(bool systemExists, const Json &system,
                               bool overrideExists, const Json &current,
                               bool ours, const std::vector<std::string> &keep);
 
+// The apps offered in the dashboard: the installed ones LG shows, with
+// whether each is kept, the kept ones first and then by title.
+Json memoryApps(const Json &installed, const Json &keepInMemory);
+
 } // namespace service
 } // namespace nativetv
