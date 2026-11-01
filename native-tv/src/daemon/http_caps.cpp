@@ -95,6 +95,11 @@ Json nativeCapabilities(const ServerConfig &config, const std::string &version,
     result.set("version", Json::text(version));
     result.set("fromHomebrewChannel",
                Json::flag(exists(join(dataRoot, ".from-homebrew-channel"))));
+    // The language of the TV app's own words: config.json "language" (a
+    // two-letter code), English when unset.
+    const Json language = config.document["language"];
+    result.set("language", Json::text(language.isString() && language.string().size() == 2
+                                          ? language.string() : std::string()));
     const Json emulateSetup = config.document["emulateSetup"];
     result.set("setupNeeded", Json::flag(emulateSetup.boolean() ||
                                           exists(join(dataRoot, ".setup-pending"))));

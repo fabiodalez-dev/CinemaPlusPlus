@@ -18,10 +18,10 @@
  */
 (function (root) {
   // Languages that have a file in /assets/i18n/. English needs none.
-  var LANGS = ['es'];
+  var LANGS = ['es', 'it'];
   // Each language in its own words, as the language list shows it, so it can
   // be found whatever the page is in.
-  var NAMES = { en: 'English', es: 'Español' };
+  var NAMES = { en: 'English', es: 'Español', it: 'Italiano' };
 
   var dict = {};
   var lang = 'en';

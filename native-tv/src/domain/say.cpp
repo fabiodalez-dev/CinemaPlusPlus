@@ -229,7 +229,21 @@ bool languageCode(const std::string &value) {
 }
 } // namespace
 
+std::mutex displayMutex;
+std::string displayCode;
+
 std::string msg(const std::string &key, const std::string &english, const Json &variables) {
+    {
+        std::lock_guard<std::mutex> lock(displayMutex);
+        if (!displayCode.empty()) {
+            const auto language = dictionaries.find(displayCode);
+            if (language != dictionaries.end()) {
+                const auto entry = language->second.find(key);
+                if (entry != language->second.end() && entry->second.from == english)
+                    return fill(entry->second.text, variables);
+            }
+        }
+    }
     const std::string text = fill(english, variables);
     if (translating.load(std::memory_order_acquire))
         remember(text, key, english, variables);
@@ -282,6 +296,16 @@ size_t loadTranslations(const std::string &directory) {
     }
     translating.store(!dictionaries.empty(), std::memory_order_release);
     return dictionaries.size();
+}
+
+void setDisplayLanguage(const std::string &code) {
+    std::lock_guard<std::mutex> lock(displayMutex);
+    displayCode = languageCode(code) && dictionaries.count(code) ? code : std::string();
+}
+
+std::string displayLanguage() {
+    std::lock_guard<std::mutex> lock(displayMutex);
+    return displayCode;
 }
 
 std::string requestedLanguage(const std::string &headerValue) {

@@ -29,7 +29,7 @@ SYSTEM_LIBRARIES = {"libc.so.6", "libm.so.6", "libpthread.so.0", "libdl.so.2",
 # The one list for the SSH deploy, the Homebrew package and the IPK; every entry
 # must match a file, so a rename here or in assets/ cannot ship half an install.
 CLIENT_ASSETS = ("Roboto-Regular.woff", "Roboto-Medium.woff", "carousel-scrim.svg",
-                 "fonts/GoogleSansFlex-*.ttf", "fonts/LICENSE-*.txt", "icons/**/*")
+                 "fonts/GoogleSansFlex-*.ttf", "fonts/LICENSE-*.txt", "icons/**/*", "i18n/*.json")
 PINNED_LICENSES = {
     "curl": {
         "7.87.0": (

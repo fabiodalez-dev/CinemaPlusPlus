@@ -25,5 +25,12 @@ std::string requestedLanguage(const std::string &headerValue);
 // the like) replaced by their translations. Raw values, the strings of fields
 // a page does not show, and anything that is not JSON come back as they were.
 std::string translateJson(const std::string &body, const std::string &language);
+
+// The TV app shows its own words in this language (a two-letter code with a
+// dictionary loaded, "" for English): msg() then returns the translation of a
+// key whose English is still the one translated. The daemon never sets it,
+// so its msg() stays English as above.
+void setDisplayLanguage(const std::string &code);
+std::string displayLanguage();
 } // namespace say
 } // namespace nativetv

@@ -1,3 +1,4 @@
+#include "domain/say_translation.hpp"
 #include "ui/application.hpp"
 #include "ui/controller_helpers.hpp"
 #include <algorithm>
@@ -142,6 +143,11 @@ void Application::response(const Response &response) {
     }
     if (response.channel == "caps") {
         state_.caps = data;
+        const std::string language = data["language"].isString() ? data["language"].string() : "";
+        if (language != say::displayLanguage()) {
+            say::setDisplayLanguage(language);
+            rebuildHome();
+        }
         capsAnswered_ = true;
         // The rule of the old dashboard page: a server that says setup is needed opens setup first,
         // whichever screen the client was asked for. A setup screen already open (Settings'

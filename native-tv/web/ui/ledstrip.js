@@ -2,11 +2,17 @@
 // range, Prova shows a colour or the room light, Salva keeps the settings.
 // The strip's own process (nativetv-ambilight) follows the screen while the
 // TV is on and gives the room light when it goes off.
-const LED_AMBIENT = [
-  ['warm', 'Warm white'], ['white', 'White'], ['orange', 'Orange'], ['red', 'Red'], ['pink', 'Pink'],
-  ['purple', 'Purple'], ['blue', 'Blue'], ['sky', 'Light blue'], ['green', 'Green'], ['off', 'Off'],
-  ['keep', 'The last colour of the film']
-];
+// Names are looked up when the tab is first shown, once i18n.js has its words.
+function ledAmbientNames() {
+  return [
+    ['warm', t('led.ambient.warm', 'Warm white')], ['white', t('led.ambient.white', 'White')],
+    ['orange', t('led.ambient.orange', 'Orange')], ['red', t('led.ambient.red', 'Red')],
+    ['pink', t('led.ambient.pink', 'Pink')], ['purple', t('led.ambient.purple', 'Purple')],
+    ['blue', t('led.ambient.blue', 'Blue')], ['sky', t('led.ambient.sky', 'Light blue')],
+    ['green', t('led.ambient.green', 'Green')], ['off', t('led.ambient.off', 'Off')],
+    ['keep', t('led.ambient.keep', 'The last colour of the film')]
+  ];
+}
 const LED_RGB = {
   warm: [255, 120, 30], white: [255, 255, 255], orange: [255, 70, 0], red: [255, 0, 0], pink: [255, 30, 110],
   purple: [140, 0, 255], blue: [0, 40, 255], sky: [0, 170, 255], green: [0, 255, 40], off: [0, 0, 0]
@@ -43,7 +49,7 @@ function ledFill(d) {
 async function loadLedStrip() {
   const select = q('led-ambient');
   if (select && !select.options.length) {
-    LED_AMBIENT.forEach(([id, name]) => select.add(new Option(t('led.ambient.' + id, name), id)));
+    ledAmbientNames().forEach(([id, name]) => select.add(new Option(name, id)));
   }
   try {
     const res = await fetch(api('/api/ledstrip'), { cache: 'no-store' });

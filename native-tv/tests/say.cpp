@@ -1,3 +1,4 @@
+#include <iostream>
 #include "domain/say.hpp"
 #include "domain/say_translation.hpp"
 #include <cstdio>
@@ -60,7 +61,30 @@ struct Dictionaries {
 };
 } // namespace
 
+// The TV app in another language: msg() itself returns the translation.
+static void testDisplayLanguage() {
+    char pattern[] = "/tmp/say-display-XXXXXX";
+    const std::string dir = mkdtemp(pattern);
+    {
+        std::ofstream out(dir + "/it.json");
+        out << "{\"tv.hi\":{\"text\":\"Ciao {name}\",\"from\":\"Hello {name}\"},"
+               "\"tv.old\":{\"text\":\"Vecchio\",\"from\":\"Old words\"}}";
+    }
+    if (nativetv::say::loadTranslations(dir) != 1) { std::cerr << "FAIL: it.json not loaded\n"; std::exit(1); }
+    Json vars = Json::object();
+    vars.set("name", Json::text("Fabio"));
+    nativetv::say::setDisplayLanguage("it");
+    if (nativetv::say::msg("tv.hi", "Hello {name}", vars) != "Ciao Fabio") { std::cerr << "FAIL: translated\n"; std::exit(1); }
+    if (nativetv::say::msg("tv.old", "New words") != "New words") { std::cerr << "FAIL: outdated stays English\n"; std::exit(1); }
+    nativetv::say::setDisplayLanguage("de");
+    if (nativetv::say::displayLanguage() != "" || nativetv::say::msg("tv.hi", "Hello {name}", vars) != "Hello Fabio") {
+        std::cerr << "FAIL: unknown language is English\n"; std::exit(1);
+    }
+    nativetv::say::setDisplayLanguage("");
+}
+
 int main() {
+    testDisplayLanguage();
     try {
         check(say::msg("srv.power.on", "On") == "On", "English fallback");
         check(say::msg("srv.update.failed", "The update failed: {error}",

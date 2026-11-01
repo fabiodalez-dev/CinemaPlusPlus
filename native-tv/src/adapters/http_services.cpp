@@ -1,3 +1,4 @@
+#include "domain/say_translation.hpp"
 #include "adapters/http_services.hpp"
 #include "adapters/legacy_routes.hpp"
 #include "adapters/readiness_retry.hpp"
@@ -223,6 +224,9 @@ void HttpServices::run(bool image) {
                     headers = curl_slist_append(headers, "Content-Type: application/json");
                 if (!session.empty())
                     headers = curl_slist_append(headers, ("X-Admin-Session: " + session).c_str());
+                const std::string language = say::displayLanguage();
+                if (!language.empty())
+                    headers = curl_slist_append(headers, ("X-Native-Tv-Lang: " + language).c_str());
                 if (headers)
                     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
                 if (request.post) {

@@ -1,4 +1,5 @@
 #include "domain/models.hpp"
+#include "domain/say.hpp"
 #include <algorithm>
 #include <map>
 
@@ -95,13 +96,13 @@ std::string pictureLabel(const Json &picture) {
     return text;
 }
 std::vector<Tab> homeTabs(const Json &catalogue) {
-    std::vector<Tab> tabs = {{"home", "Home", Operation::None}};
+    std::vector<Tab> tabs = {{"home", say::msg("tv.home.tab.home", "Home"), Operation::None}};
     if (catalogue["layout"]["showLive"].boolean() &&
         catalogue["sources"]["channels"].number(-1) != 0)
-        tabs.push_back({"live", "Live", Operation::None});
-    tabs.push_back({"apps", "Apps", Operation::None});
+        tabs.push_back({"live", say::msg("tv.home.tab.live", "Live"), Operation::None});
+    tabs.push_back({"apps", say::msg("tv.home.tab.apps", "Apps"), Operation::None});
     if (catalogue["layout"]["showInputs"].boolean(true) && catalogue["devices"].size())
-        tabs.push_back({"inputs", "Inputs", Operation::None});
+        tabs.push_back({"inputs", say::msg("tv.home.tab.inputs", "Inputs"), Operation::None});
     return tabs;
 }
 // The ids hidden from `list`: "app", "dev" or "ch" are Home's rows, "appsTab" is the Apps tab's own
@@ -125,7 +126,9 @@ CardRow catalogueRow(const std::string &kind, const Json &catalogue, const Json 
     const Json hiddenList = hiddenIds(catalogue, list.empty() ? kind : list);
     CardRow row;
     row.key = kind;
-    row.title = kind == "app" ? "Apps" : kind == "dev" ? "Inputs" : "Channels";
+    row.title = kind == "app" ? say::msg("tv.home.tab.apps", "Apps")
+                : kind == "dev" ? say::msg("tv.home.tab.inputs", "Inputs")
+                                : say::msg("tv.home.row.channels", "Channels");
     std::map<std::string, Json> index;
     for (const auto &item : catalogue[kind == "app"   ? "apps"
                                       : kind == "dev" ? "devices"
@@ -200,7 +203,7 @@ std::string kindOf(const Card &card) {
 CardRow appsRow(const Json &catalogue, const Json &guide, bool withHidden, const std::string &list) {
     CardRow apps;
     apps.key = "app";
-    apps.title = list == "appsTab" ? "Apps" : "Your apps";
+    apps.title = list == "appsTab" ? say::msg("tv.home.tab.apps", "Apps") : say::msg("tv.home.row.yourApps", "Your apps");
     for (const CardRow &row : appRows(catalogue, guide, list))
         apps.cards.insert(apps.cards.end(), row.cards.begin(), row.cards.end());
     if (withHidden)
@@ -242,11 +245,12 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
             result.push_back(row);
         return result;
     }
-    const std::map<std::string, std::string> names = {{"trending", "Top picks for you"},
-                                                      {"movies", "Trending films this week"},
-                                                      {"series", "Trending series this week"},
-                                                      {"netflix", "Available on Netflix"},
-                                                      {"youtube", "Trending on YouTube"}};
+    const std::map<std::string, std::string> names = {
+        {"trending", say::msg("tv.home.row.trending", "Top picks for you")},
+        {"movies", say::msg("tv.home.row.movies", "Trending films this week")},
+        {"series", say::msg("tv.home.row.series", "Trending series this week")},
+        {"netflix", say::msg("tv.home.row.netflix", "Available on Netflix")},
+        {"youtube", say::msg("tv.home.row.youtube", "Trending on YouTube")}};
     std::map<std::string, Json> feedRows;
     for (const auto &source : discover["rows"].items())
         feedRows[source["key"].string()] = source;

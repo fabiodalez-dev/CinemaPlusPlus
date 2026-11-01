@@ -1,3 +1,4 @@
+#include "domain/say_translation.hpp"
 #include "adapters/http_services.hpp"
 #include "graphics/debug.hpp"
 #include "graphics/glyph_atlas.hpp"
@@ -343,6 +344,8 @@ int main(int argc, char **argv) {
             HttpServices http(opts.server);
             Application app(http, opts.screen);
             const std::string assets = resourceDirectory(argv[0]) + "/assets";
+            // The words in other languages; the daemon's /api/caps says which.
+            (void)say::loadTranslations(assets + "/i18n");
             Renderer renderer(width, height, opts.font, assets,
                               [&http](const std::string &path) { return http.image(path) != 0; });
             // The atlases and the loader hold textures in the renderer, so they are declared
