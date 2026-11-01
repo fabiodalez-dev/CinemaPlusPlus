@@ -32,6 +32,11 @@ HomeWallpaperSaveResult saveHomeWallpaper(const std::string &slot,
                                           const std::string &dataRoot,
                                           const std::string &bytes,
                                           std::string *error = nullptr);
+// On the first start, put the bundled wallpaper in all four slots so Home is
+// never a flat colour. A marker file records that it ran: slots the viewer
+// clears or replaces later are left as they are.
+bool seedHomeWallpapers(const std::string &dataRoot, const std::string &bundledJpeg,
+                        std::string *error = nullptr);
 bool removeHomeWallpapers(const std::string &dataRoot,
                           std::string *error = nullptr);
 

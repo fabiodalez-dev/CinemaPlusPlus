@@ -33,6 +33,7 @@
 #include "daemon/mqtt_command_router.hpp"
 #include "daemon/ntp_client.hpp"
 #include "daemon/paths.hpp"
+#include "service/home_wallpapers.hpp"
 #include "daemon/mqtt_state_publisher.hpp"
 #include "daemon/mqtt_telemetry_publisher.hpp"
 #include "daemon/mqtt_topics.hpp"
@@ -894,6 +895,12 @@ int main(int argc, char **argv) {
         // message goes out in English.
         if (const size_t languages = nativetv::say::loadTranslations(assetsRoot + "/i18n"))
             logger.info("strings: " + std::to_string(languages) + " dashboard language(s) loaded");
+        {
+            std::string wallpaperError;
+            if (!nativetv::service::seedHomeWallpapers(
+                    dataDirectory(), assetsRoot + "/wallpapers/nebula.jpg", &wallpaperError))
+                logger.warning("home wallpapers: the default could not be set: " + wallpaperError);
+        }
 
         const bool nativeMqttShadowRequested =
             environmentEnabled("TVWEB_NATIVE_MQTT_SHADOW");

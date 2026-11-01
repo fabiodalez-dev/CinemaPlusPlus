@@ -252,6 +252,45 @@ bool validHomeWallpaperJpeg(const std::string &bytes) {
     return false;
 }
 
+bool seedHomeWallpapers(const std::string &dataRoot, const std::string &bundledJpeg,
+                        std::string *error) {
+    const std::string marker = wallpaperDirectory(dataRoot) + "/.seeded";
+    struct stat info = {};
+    if (lstat(marker.c_str(), &info) == 0) {
+        if (error) error->clear();
+        return true;
+    }
+    const Json status = homeWallpaperStatus(dataRoot);
+    if (!status["available"].boolean()) {
+        const int source = open(bundledJpeg.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+        if (source < 0) {
+            setErrnoError(error);
+            return false;
+        }
+        std::string bytes;
+        char buffer[65536];
+        ssize_t count = 0;
+        while ((count = read(source, buffer, sizeof buffer)) > 0 &&
+               bytes.size() <= MAX_WALLPAPER_BYTES)
+            bytes.append(buffer, static_cast<size_t>(count));
+        close(source);
+        static const char *slots[] = {"morning", "afternoon", "evening", "night"};
+        for (const char *slot : slots)
+            if (saveHomeWallpaper(slot, dataRoot, bytes, error) != HomeWallpaperSaveResult::saved) {
+                if (error && error->empty()) *error = "the bundled wallpaper was refused";
+                return false;
+            }
+    }
+    const int descriptor = open(marker.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0644);
+    if (descriptor < 0) {
+        setErrnoError(error);
+        return false;
+    }
+    close(descriptor);
+    if (error) error->clear();
+    return true;
+}
+
 bool removeHomeWallpapers(const std::string &dataRoot, std::string *error) {
     const std::string directoryPath = wallpaperDirectory(dataRoot);
     const int directory = open(directoryPath.c_str(),

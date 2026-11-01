@@ -20,6 +20,9 @@ class TemporaryDirectory {
         (void)unlink((path_ + "/home-wallpaper-uploads/afternoon.jpg.part").c_str());
         (void)unlink((path_ + "/home-wallpaper-uploads/night.jpg").c_str());
         (void)unlink((path_ + "/home-wallpaper-uploads/evening.jpg").c_str());
+        (void)unlink((path_ + "/home-wallpaper-uploads/afternoon.jpg").c_str());
+        (void)unlink((path_ + "/home-wallpaper-uploads/.seeded").c_str());
+        (void)unlink((path_ + "/bundled.jpg").c_str());
         (void)rmdir((path_ + "/home-wallpaper-uploads").c_str());
         (void)rmdir(path_.c_str());
     }
@@ -98,5 +101,31 @@ int main() {
     assert(nativetv::service::saveHomeWallpaper(
                "unknown", root.path(), jpeg, &error) ==
            nativetv::service::HomeWallpaperSaveResult::invalidSlot);
+
+    // The bundled wallpaper fills every slot once, and never again after the
+    // viewer clears them; an upload already there is kept.
+    using nativetv::service::seedHomeWallpapers;
+    TemporaryDirectory fresh;
+    write(fresh.path() + "/bundled.jpg", jpeg);
+    assert(seedHomeWallpapers(fresh.path(), fresh.path() + "/bundled.jpg", &error));
+    for (const char *slot : {"morning", "afternoon", "evening", "night"})
+        assert(readHomeWallpaper(slot, fresh.path()).bytes == jpeg);
+    assert(nativetv::service::removeHomeWallpapers(fresh.path(), &error));
+    assert(seedHomeWallpapers(fresh.path(), fresh.path() + "/bundled.jpg", &error));
+    assert(!nativetv::service::homeWallpaperStatus(fresh.path())["available"].boolean());
+
+    TemporaryDirectory uploaded;
+    std::string other = jpeg;
+    other.insert(other.size() - 2, "\x02");
+    assert(nativetv::service::saveHomeWallpaper("night", uploaded.path(), other, &error) ==
+           nativetv::service::HomeWallpaperSaveResult::saved);
+    write(uploaded.path() + "/bundled.jpg", jpeg);
+    assert(seedHomeWallpapers(uploaded.path(), uploaded.path() + "/bundled.jpg", &error));
+    assert(readHomeWallpaper("night", uploaded.path()).bytes == other);
+    assert(!readHomeWallpaper("morning", uploaded.path()).found);
+
+    TemporaryDirectory missing;
+    assert(!seedHomeWallpapers(missing.path(), missing.path() + "/bundled.jpg", &error));
+    assert(!error.empty());
     return 0;
 }

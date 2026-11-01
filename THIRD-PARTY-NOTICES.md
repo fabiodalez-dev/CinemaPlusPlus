@@ -17,6 +17,7 @@ the path given, or is the licence named by its SPDX id at the address given.
 | [Google Sans Flex](https://github.com/googlefonts/googlesans-flex) | Text of the native TV client | OFL-1.1 | [native-tv/assets/fonts/LICENSE-GoogleSansFlex-OFL.txt](native-tv/assets/fonts/LICENSE-GoogleSansFlex-OFL.txt) |
 | [Material Design Icons](https://pictogrammers.com/library/mdi/) (`@mdi/js`) | The TV client's icons in `native-tv/assets/icons/material/` | Apache-2.0 | [native-tv/assets/icons/material/LICENSE-MaterialDesignIcons.txt](native-tv/assets/icons/material/LICENSE-MaterialDesignIcons.txt) |
 | [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) | The brand logos of the themed app icons in `native-tv/assets/app-icons/app-icons.pack` | Apache-2.0 | [native-tv/assets/app-icons/LICENSE-DashboardIcons.txt](native-tv/assets/app-icons/LICENSE-DashboardIcons.txt) |
+| [Bright star with colorful nebula](https://unsplash.com/photos/bsEmH06Ko1w) by Universtock | The default Home wallpaper, `native-tv/assets/wallpapers/nebula.jpg` | Unsplash License | [native-tv/assets/wallpapers/LICENSE-Unsplash.txt](native-tv/assets/wallpapers/LICENSE-Unsplash.txt) |
 | [Material Symbols](https://fonts.google.com/icons) (Google), Rounded | The icon sprite in `native-tv/web/ui.html` | Apache-2.0 | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0), the text in the two Apache-2.0 files above |
 
 ## Linked from the webOSbrew SDK
