@@ -403,6 +403,68 @@ void banner(kit::Paint paint, float amount) {
 }
 } // namespace
 
+namespace {
+// A band of ink fading from `from` to `to` alpha, top to bottom.
+void veil(Scene &scene, float y, float h, float from, float to) {
+    Node &band = scene.shape({0, y, kit::canvas::width, h}, kit::color::ink);
+    band.gradient.angle = 180; // top to bottom
+    band.gradient.stops = 2;
+    band.gradient.color[0] = kit::focus::withAlpha(kit::color::ink, from);
+    band.gradient.at[0] = 0;
+    band.gradient.color[1] = kit::focus::withAlpha(kit::color::ink, to);
+    band.gradient.at[1] = 1;
+}
+
+// The Live tab over the broadcast: the channel banner always, the bar and the channels while
+// the controls show. Leaves an opacity pushed when the controls are fading (drawHome pops it).
+void drawLive(kit::Paint paint, const Frame &frame) {
+    const ViewState &state = frame.state;
+    const Motion &motion = frame.motion;
+    Scene &scene = paint.scene;
+    scene.background = {0, 0, 0, 0};
+    const float banner = static_cast<float>(motion.value("liveban"));
+    if (banner > .002f) {
+        const std::string id = state.live.typed.empty() ? state.live.targetId : std::string();
+        Json channel;
+        for (const Json &item : state.catalogue["channels"].items())
+            if (item["id"].string() == id)
+                channel = item;
+        const std::string number = state.live.typed.empty() ? channel["number"].string() : state.live.typed + "-";
+        const std::string name = channel["name"].string();
+        const std::string programme = state.guide[id][static_cast<size_t>(0)]["title"].string();
+        const std::string next = state.guide[id][static_cast<size_t>(1)]["title"].string();
+        scene.pushOpacity(banner);
+        Node &panel = scene.shape({kit::canvas::safeX - 24, 836, 1000, 196}, kit::color::surface2, kit::radius::lg);
+        panel.ring = {1, 0, kit::alpha::outline};
+        paint.glyphs.text(scene, {kit::canvas::safeX, 860, 200, kit::type::numeral.line}, number,
+                          kit::type::numeral, kit::color::onSurface);
+        paint.glyphs.text(scene, {kit::canvas::safeX + 210, 862, 740, kit::type::title.line},
+                          name.empty() && !state.live.typed.empty() ? say::msg("tv.live.typing", "Channel")
+                                                                     : name,
+                          kit::type::title, kit::color::onSurface);
+        if (!programme.empty())
+            paint.glyphs.text(scene, {kit::canvas::safeX + 210, 914, 740, kit::type::body.line}, programme,
+                              kit::type::body, kit::color::onSurface2);
+        if (!next.empty())
+            paint.glyphs.text(scene, {kit::canvas::safeX + 210, 960, 740, kit::type::labelM.line},
+                              say::msg("tv.live.next", "Next: {title}", fields({{"title", Json::text(next)}})),
+                              kit::type::labelM, kit::color::onSurface3);
+        scene.popOpacity();
+    }
+    const float controls = static_cast<float>(motion.value("livectl"));
+    if (controls < .999f)
+        scene.pushOpacity(controls);
+    if (controls > .002f) {
+        veil(scene, 0, 240, .75f, 0);
+        veil(scene, 620, 460, 0, .85f);
+        if (!state.live.status.empty())
+            paint.glyphs.text(scene, {kit::canvas::safeX, 180, 1400, kit::type::body.line}, state.live.status,
+                              kit::type::body, kit::color::onSurface);
+        rows(paint, frame, 0, -1);
+    }
+}
+} // namespace
+
 void drawHome(kit::Paint paint, const Frame &frame) {
     const ViewState &state = frame.state;
     const HomeState &home = state.home;
@@ -412,6 +474,14 @@ void drawHome(kit::Paint paint, const Frame &frame) {
     if (home.tabs.empty())
         return;
     const bool apps = home.tabs[home.tab].key == "apps";
+    // Live TV: the page is see-through over the broadcast, with veils for the bar and the rows.
+    if (state.live.open && home.tabs[home.tab].key == "live") {
+        drawLive(paint, frame);
+        drawTopBar(paint, frame, static_cast<int>(home.tab));
+        if (static_cast<float>(motion.value("livectl")) < .999f)
+            scene.popOpacity();
+        return;
+    }
     wallpaper(scene, home);
     float wall = static_cast<float>(motion.value("wall"));
     kit::ambientWall(paint, 1 - wall, home.art.wallTint);

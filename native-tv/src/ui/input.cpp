@@ -18,6 +18,8 @@ void Application::key(Key key) {
         back();
         return;
     }
+    if (liveKey(key))
+        return;
     if (key != Key::Ok)
         confirmId_.clear();
     dirty_ = true;
@@ -257,6 +259,12 @@ void Application::longPress() {
     }
 }
 void Application::digit(int place) {
+    if (state_.live.open && liveTab()) {
+        wake();
+        liveShowControls();
+        liveDigit(place);
+        return;
+    }
     const auto &home = state_.home;
     if (state_.screen != Screen::Home || home.editing || home.arranging || place < 1)
         return;

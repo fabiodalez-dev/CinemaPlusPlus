@@ -8,6 +8,7 @@
 #include "ui/scene.hpp"
 #include "ui/screen.hpp"
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 
@@ -79,8 +80,17 @@ struct RecentState {
     std::string status;
     unsigned revision = 0;
 };
+// Live TV inside Home (the Live tab): the broadcast plays in the client's video window behind a
+// see-through page; the controls fade after ten seconds and CH+/CH- or numbers change channel.
+struct LiveState {
+    bool open = false;      // the tuner is asked for or playing in our window
+    bool controls = true;   // the page over the picture is shown
+    bool banner = false;    // the channel banner is shown
+    std::string windowId, channelId, targetId, typed, status;
+};
 struct ViewState {
     Screen screen = Screen::Home;
+    LiveState live;
     HomeState home;
     MenuState menu;
     RecentState recents;
@@ -132,6 +142,17 @@ class Application : private ScreenHost {
     // somewhere to come from: the screen it hands back to keeps the origin it had.
     std::string currentRoute_, cameFrom_;
     std::map<std::string, Json> memory_;  // what screens keep between openings
+    std::function<std::string(bool)> videoPlane_;
+    uint32_t liveControlsUntil_ = 0, liveBannerUntil_ = 0, liveTuneAt_ = 0, liveTypedAt_ = 0;
+    bool liveTab() const;
+    void liveSync();
+    void liveClose();
+    bool liveKey(Key key);
+    void liveZap(int step);
+    void liveTune(const std::string &channelId, bool now);
+    void liveDigit(int digit);
+    void liveShowControls();
+    std::vector<Json> liveChannels() const;
     // Home's choreography (home_motion.cpp).
     struct HomeFlow {
         bool entered = false;        // the page's entrance has played
@@ -246,6 +267,11 @@ class Application : private ScreenHost {
     void longPress();
     // Back held: on Home it opens the recent apps, the only way to them; a tap of Back never does.
     void longBack();
+    // The platform's video window: show(true) gives its id (empty where there is none, a
+    // desktop), show(false) gives it back.
+    void setVideoPlane(std::function<std::string(bool)> plane) {
+        videoPlane_ = std::move(plane);
+    }
     // A number key on Home: opens the app in that place of the apps row (1 is the first).
     void digit(int place);
     void input(const std::string &text);

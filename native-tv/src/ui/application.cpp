@@ -113,6 +113,7 @@ void Application::active(bool value) {
         }
     } else {
         clearPicture();
+        liveClose();
     }
     dirty_ = true;
 }
@@ -141,6 +142,7 @@ bool Application::update(uint32_t now) {
         homeUpdate();
         homeBeat(nullptr);
     }
+    liveSync();
     if (screen_)
         screenBusy = screen_->update(*this);
     // The wallpaper is shown once its picture has arrived.
@@ -160,6 +162,8 @@ bool Application::update(uint32_t now) {
 // The first input afterwards only wakes it. Home's hero advance and the beat read `idle` too.
 void Application::idleUpdate() {
     const uint32_t idleAt = flow_.lastKeyAt + static_cast<uint32_t>(kit::motion::ms::idleAfter);
+    if (state_.live.open)
+        flow_.lastKeyAt = now_; // live TV is never dimmed: the controls fade instead
     if (!flow_.idle && static_cast<int32_t>(now_ - idleAt) >= 0) {
         flow_.idle = true;
         motion_.tween("dim", .66, kit::motion::ms::idleDim, kit::easing(kit::motion::ease::inOut));

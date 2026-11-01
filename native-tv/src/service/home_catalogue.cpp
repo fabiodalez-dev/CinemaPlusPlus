@@ -441,7 +441,8 @@ Json homeCatalogue(const Json &document, const Json &apps, const Json &devices,
         const Json selected = document["channels"];
         for (const Json &channel : channels.items()) {
             const std::string id = channel["id"].string();
-            bool selectedId = false;
+            // With no favourites chosen every channel is listed, as Cinema's Live does.
+            bool selectedId = selected.size() == 0;
             for (const Json &candidate : selected.items())
                 if (candidate.string() == id) selectedId = true;
             if (selectedId) {

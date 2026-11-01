@@ -28,6 +28,9 @@
 #include <sys/resource.h>
 #include <stdexcept>
 #include <vector>
+#if __has_include(<SDL_webOS.h>)
+#include <SDL_webOS.h>
+#endif
 
 namespace {
 using namespace nativetv;
@@ -343,6 +346,28 @@ int main(int argc, char **argv) {
             markStartup("windowMs");
             HttpServices http(opts.server);
             Application app(http, opts.screen);
+#if __has_include(<SDL_webOS.h>)
+            // Live TV plays in an exported video window over the whole screen; the page above it
+            // is see-through where the Live tab draws nothing.
+            std::string videoWindow;
+            app.setVideoPlane([&videoWindow](bool show) {
+                if (!show) {
+                    if (!videoWindow.empty())
+                        SDL_webOSDestroyExportedWindow(videoWindow.c_str());
+                    videoWindow.clear();
+                    return std::string();
+                }
+                if (videoWindow.empty()) {
+                    const char *created = SDL_webOSCreateExportedWindow(SDL_WEBOS_EXPORED_WINDOW_TYPE_VIDEO);
+                    if (!created)
+                        return std::string();
+                    videoWindow = created;
+                }
+                SDL_Rect whole = {0, 0, 1920, 1080};
+                SDL_webOSSetExportedWindow(videoWindow.c_str(), &whole, &whole);
+                return videoWindow;
+            });
+#endif
             const std::string assets = resourceDirectory(argv[0]) + "/assets";
             // The words in other languages; the daemon's /api/caps says which.
             (void)say::loadTranslations(assets + "/i18n");

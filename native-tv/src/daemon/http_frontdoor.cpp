@@ -1770,6 +1770,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       homeJellyfin_(dataRoot_, rootedSystemPath(systemRoot, "/var/lib/launch-home-cinema/jellyfin.json")),
       jellyfinLink_(rootedSystemPath(systemRoot, "/var/lib/launch-home-cinema/jellyfin.json")),
       homeWeather_(dataRoot_),
+      liveTv_(rootedSystemPath(systemRoot, "/run/nativetv-live")),
       homeImageProxy_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
@@ -10943,6 +10944,55 @@ void HttpFrontDoor::ledStripAction(HttpExchange &exchange, const std::string &ac
     respond(200, response);
 }
 
+// Live TV inside Home: GET the state; POST {"action": "open"|"tune"|"close", ...} from the TV's
+// own client, which owns the video window (see LiveTv).
+void HttpFrontDoor::handleLiveTv(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    if (request.method == "GET") {
+        respond(200, liveTv_.state());
+        return;
+    }
+    Json failure = Json::object();
+    failure.set("ok", Json::flag(false));
+    if (request.method != "POST") {
+        failure.set("error", Json::text("method not allowed"));
+        respond(405, failure);
+        return;
+    }
+    if (!isLoopbackPeer(request.remoteAddress)) {
+        failure.set("error", Json::text("only the TV's own client plays live TV"));
+        respond(403, failure);
+        return;
+    }
+    if (rejectCrossSitePost(exchange))
+        return;
+    if (!exchange.setBodyLimit(1024)) {
+        sendSetupError(exchange, 413, "request body too large", true);
+        return;
+    }
+    std::string body;
+    char buffer[512];
+    for (;;) {
+        const int count = exchange.readBody(buffer, sizeof(buffer));
+        if (count == 0)
+            break;
+        if (count < 0) {
+            sendSetupError(exchange, 400, "invalid request body", true);
+            return;
+        }
+        body.append(buffer, static_cast<size_t>(count));
+    }
+    const Json reply = liveTv_.act(Json::parse(body));
+    respond(reply["ok"].boolean() ? 200 : 400, reply);
+}
+
 // The weather on Home: GET the forecast, GET /search?q= for places, POST
 // {"enabled", "units", "place"} to change it.
 void HttpFrontDoor::handleHomeWeather(HttpExchange &exchange) const {
@@ -18367,6 +18417,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/jellyfin/image" && request.method == "GET") {
         sendHomeJellyfinImage(exchange);
+        return;
+    }
+    if (request.uri == "/api/live") {
+        handleLiveTv(exchange);
         return;
     }
     if (request.uri == "/api/home/weather" || request.uri == "/api/home/weather/search") {

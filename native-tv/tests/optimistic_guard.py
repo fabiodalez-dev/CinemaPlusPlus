@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PAGE_WRITE = re.compile(r"\bservices\(\)\s*\.\s*write\s*\(")
 APPLICATION_WRITE = re.compile(r"\bservices_\s*\.\s*write\s*\(")
 # What implements the Application (it owns the Services); a page may not reach services_ at all.
-APPLICATION_FILES = {"application.cpp", "navigation.cpp", "home_motion.cpp", "data_controller.cpp", "input.cpp",
+APPLICATION_FILES = {"application.cpp", "live_controller.cpp", "navigation.cpp", "home_motion.cpp", "data_controller.cpp", "input.cpp",
                      "recents_controller.cpp", "picture_controller.cpp", "menu_controller.cpp", "optimistic.cpp"}
 
 

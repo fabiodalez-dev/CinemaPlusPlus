@@ -675,6 +675,15 @@
       "notes": "The daemon validates open/close actions against the current recent list. Close operations stop running native or web apps, confirm exit with retries before removing selected cards, and preserve newly added or Home cards. Node retains standalone and startup-fallback handling."
     },
     {
+      "paths": ["/api/live"],
+      "methods": ["GET", "POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; POST only from TV loopback",
+      "bodyLimit": {"max": 1024, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Live TV inside Home: the TV client hands its exported video window to open the tuner (utp.broadcast through one long-lived bus client), tunes channels and closes it."
+    },
+    {
       "paths": ["/api/home/weather/search"],
       "methods": ["GET"],
       "auth": "token",

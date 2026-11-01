@@ -92,7 +92,7 @@ add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
   src/daemon/remote_button_log_watcher.cpp
   src/daemon/remote_keys_reconciler.cpp
   src/daemon/state_subscriptions.cpp
-  src/daemon/screen_time_enforcer.cpp src/daemon/syslog_forwarder.cpp)
+  src/daemon/screen_time_enforcer.cpp src/daemon/syslog_forwarder.cpp src/daemon/live_tv.cpp)
 target_link_libraries(nativetv_daemon PUBLIC nativetv_core nativetv_client_config nativetv_state
   Threads::Threads PkgConfig::CURL)
 target_link_libraries(nativetv_daemon PUBLIC nativetv_history)
@@ -784,6 +784,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-home-weather-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-weather-tests PRIVATE -Wall -Wextra -Werror)
   add_test(NAME native-home-weather COMMAND native-home-weather-tests)
+  add_executable(native-live-tv-tests tests/live_tv.cpp)
+  target_link_libraries(native-live-tv-tests PRIVATE nativetv_daemon)
+  target_compile_options(native-live-tv-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-live-tv COMMAND native-live-tv-tests)
   add_executable(native-ambilight-colors-tests tests/ambilight_colors.cpp)
   target_link_libraries(native-ambilight-colors-tests PRIVATE nativetv_ambilight)
   target_compile_options(native-ambilight-colors-tests PRIVATE -Wall -Wextra -Werror)
@@ -886,7 +890,7 @@ if(NATIVETV_BUILD_CLIENT)
   target_include_directories(nanosvg PUBLIC third_party/nanosvg)
   add_library(nativetv_presentation
     src/ui/scene.cpp src/ui/kit/components.cpp src/ui/kit/widgets.cpp src/ui/kit/gallery.cpp
-    src/ui/application.cpp src/ui/navigation.cpp src/ui/input.cpp
+    src/ui/application.cpp src/ui/navigation.cpp src/ui/input.cpp src/ui/live_controller.cpp
     src/ui/menu_controller.cpp src/ui/data_controller.cpp
     src/ui/home_view.cpp src/ui/menu_view.cpp
     src/ui/picture_controller.cpp src/ui/recents_controller.cpp src/ui/recents_view.cpp

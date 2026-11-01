@@ -78,7 +78,9 @@ Renderer::Renderer(int width, int height, const std::string &font, const std::st
     const unsigned char pixel[] = {255, 255, 255, 255};
     update(white_, 0, 0, 1, 1, pixel);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // Colour blends by its alpha; the window's own alpha adds up (over the see-through page of
+    // live TV it says how much of the video shows; elsewhere it stays opaque).
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
     current_ = RenderCounters();
 }
@@ -352,7 +354,8 @@ void Renderer::draw(const Scene &scene) {
         glEnable(GL_BLEND);
     glDisable(GL_SCISSOR_TEST);
     glViewport(0, 0, static_cast<GLsizei>(width_ * viewport), static_cast<GLsizei>(height_ * viewport));
-    glClearColor(scene.background.r, scene.background.g, scene.background.b, 1);
+    // A see-through background (alpha 0) lets the video plane show: live TV behind Home.
+    glClearColor(scene.background.r, scene.background.g, scene.background.b, scene.background.a);
     glClear(GL_COLOR_BUFFER_BIT);
     Uint64 traceClear = debug.trace ? SDL_GetPerformanceCounter() : 0, traceBuffer = 0,
            traceWorst = 0;

@@ -126,6 +126,12 @@ void Application::execute(const Command &command) {
         route(command.route);
         return;
     }
+    // A channel on the Live tab changes the picture behind the page instead of leaving Home.
+    if (command.operation == Operation::OpenHomeItem && command.body["kind"].string() == "ch" &&
+        state_.live.open && liveTab()) {
+        liveTune(command.body["id"].string(), true);
+        return;
+    }
     if (command.operation == Operation::None || state_.busy)
         return;
     std::string id = std::to_string(static_cast<int>(command.operation)) + command.body.dump();

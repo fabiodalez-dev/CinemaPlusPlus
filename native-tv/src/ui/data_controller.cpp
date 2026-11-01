@@ -1,3 +1,5 @@
+#include "ui/kit/tuning.hpp"
+#include "domain/say.hpp"
 #include "domain/say_translation.hpp"
 #include "ui/application.hpp"
 #include "ui/controller_helpers.hpp"
@@ -59,6 +61,27 @@ void Application::refresh() {
                              : 10000);
 }
 void Application::response(const Response &response) {
+    if (response.channel == "live") {
+        const Json data = response.json();
+        auto &live = state_.live;
+        if (!live.open)
+            return;
+        if (response.ok() && data["ok"].boolean()) {
+            live.status.clear();
+            if (data["channelId"].isString() && !data["channelId"].string().empty())
+                live.channelId = data["channelId"].string();
+            if (live.targetId.empty()) {
+                live.targetId = live.channelId;
+                live.banner = true;
+                liveBannerUntil_ = now_ + 4000;
+                motion_.tween("liveban", 1, kit::motion::ms::fast, kit::easing(kit::motion::ease::out));
+            }
+        } else {
+            live.status = say::msg("tv.live.failed", "The picture did not open. Back and Live again retries.");
+        }
+        dirty_ = true;
+        return;
+    }
     if (response.channel == "beat") {
         homeBeat(&response);
         return;
