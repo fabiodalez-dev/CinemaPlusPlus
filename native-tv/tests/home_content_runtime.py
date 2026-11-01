@@ -96,9 +96,11 @@ def main():
 
             status, body = get(port, "/api/home/discover", token)
             assert status == 200
-            assert json.loads(body) == {
-                "ok": True, "enabled": False, "rows": []
-            }
+            # Without TMDB and without a Jellyfin connection: no rows. The
+            # library is still being read at first, then found missing.
+            discover = json.loads(body)
+            assert discover.pop("jellyfin") in ("loading", "unconfigured"), discover
+            assert discover == {"ok": True, "enabled": False, "rows": []}, discover
 
             status, body = get(
                 port,

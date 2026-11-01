@@ -202,9 +202,11 @@ function select() {
 }
 var sel = select();
 p = boot({ stored: 'es', select: sel });
-assert.strictEqual(sel.options.length, 1);
+assert.strictEqual(sel.options.length, 2);
 assert.strictEqual(sel.options[0].value, 'es');
 assert.strictEqual(sel.options[0].textContent, 'Español');
+assert.strictEqual(sel.options[1].value, 'it');
+assert.strictEqual(sel.options[1].textContent, 'Italiano');
 assert.strictEqual(sel.value, 'es');
 sel.value = 'en';
 sel.listeners.change();
@@ -231,7 +233,7 @@ sel = select();
 p = boot({ readyState: 'loading', select: sel, elements: [] });
 assert.strictEqual(sel.options.length, 0, 'while the page is parsing, the list waits for it');
 p.listeners.DOMContentLoaded();
-assert.strictEqual(sel.options.length, 1);
+assert.strictEqual(sel.options.length, 2);
 console.log('  ✓ the Server tab\'s list offers Español, stores a choice and drops ?lang= before reloading');
 
 console.log('ALL test-i18n.js assertions passed!\n');

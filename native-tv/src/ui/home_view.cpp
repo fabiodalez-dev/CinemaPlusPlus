@@ -140,7 +140,9 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab) {
 
 namespace {
 // The rows of cards; `top` moves them all, so the Apps page can start its rows under its head.
-void rows(kit::Paint paint, const Frame &frame, float top = 0) {
+// With `fadeTop` set, a row fades out as its name rises past that line, so rows scrolled up
+// leave the bar's area instead of being drawn under the tabs.
+void rows(kit::Paint paint, const Frame &frame, float top = 0, float fadeTop = -1) {
     const ViewState &state = frame.state;
     const HomeState &home = state.home;
     const Motion &motion = frame.motion;
@@ -154,6 +156,10 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
         // Rows well above the bar or below the screen are not drawn at all.
         if (labelY > kit::canvas::height + 40 || labelY + 260 < 100)
             continue;
+        const float fade = fadeTop < 0 ? 1.0f : kit::focus::clamp01((labelY - fadeTop + 90) / 90);
+        if (fade <= .01f)
+            continue;
+        paint.scene.pushOpacity(fade);
         if (home.arranging && ri == home.row) {
             // The lifted row sits on a raised slab while it is being moved. The slab is as wide as
             // the row, with room all round for the focused name, which is wider than its circle.
@@ -245,6 +251,7 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                 kit::card(paint, poster);
             }
         }
+        paint.scene.popOpacity();
     }
 }
 
@@ -371,7 +378,13 @@ void drawHome(kit::Paint paint, const Frame &frame) {
             dots.y = parallax.textY;
             kit::pagination(paint, dots);
         }
-        rows(paint, frame);
+        // Rows scrolled up pass under the bar: cut at its foot and faded before they reach it.
+        const bool scrolled = motion.value("sy") < -.5;
+        if (scrolled)
+            scene.pushClip({0, layout::appsTop - 16, kit::canvas::width, kit::canvas::height});
+        rows(paint, frame, 0, scrolled ? layout::appsTop : -1);
+        if (scrolled)
+            scene.popClip();
         if (home.rows.empty())
             paint.glyphs.text(scene, {kit::canvas::safeX, 800, 1600, kit::type::body.line},
                               state.catalogue.valid() ? "No items to show. Open Settings to arrange Home."

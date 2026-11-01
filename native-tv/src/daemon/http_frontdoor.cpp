@@ -1767,6 +1767,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       // Cinema's connection, written by its Quick Connect: root-only, read in place. The
       // constructor's systemRoot: systemRoot_ is declared further down and not set yet.
       homeJellyfin_(dataRoot_, rootedSystemPath(systemRoot, "/var/lib/launch-home-cinema/jellyfin.json")),
+      jellyfinLink_(rootedSystemPath(systemRoot, "/var/lib/launch-home-cinema/jellyfin.json")),
       homeImageProxy_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
@@ -10940,6 +10941,89 @@ void HttpFrontDoor::ledStripAction(HttpExchange &exchange, const std::string &ac
     respond(200, response);
 }
 
+// Quick Connect with Jellyfin. GET reports the state and, while a code waits,
+// asks the server whether it was approved; POST {"action": "start", "server"},
+// {"action": "cancel"} or {"action": "unlink"}.
+void HttpFrontDoor::handleJellyfinLink(HttpExchange &exchange) const {
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    const auto fail = [&respond](int status, const std::string &error) {
+        Json response = Json::object();
+        response.set("ok", Json::flag(false));
+        response.set("error", Json::text(error));
+        respond(status, response);
+    };
+    const HttpRequest &request = exchange.request();
+    if (request.method == "GET") {
+        std::string error;
+        if (jellyfinLink_.poll(error))
+            homeJellyfin_.refreshNow();
+        Json response = jellyfinLink_.status();
+        response.set("ok", Json::flag(true));
+        if (!error.empty())
+            response.set("error", Json::text(error));
+        respond(200, response);
+        return;
+    }
+    if (request.method != "POST") {
+        fail(405, "method not allowed");
+        return;
+    }
+    if (!setupJsonContentType(request)) {
+        fail(415, "Content-Type must be application/json");
+        return;
+    }
+    if (!sameOriginRequest(request)) {
+        fail(403, "cross-origin request refused");
+        return;
+    }
+    if (!exchange.setBodyLimit(4096)) {
+        sendSetupError(exchange, 413, "request body too large", true);
+        return;
+    }
+    std::string body;
+    char buffer[1024];
+    for (;;) {
+        const int count = exchange.readBody(buffer, sizeof(buffer));
+        if (count == 0)
+            break;
+        if (count < 0) {
+            fail(400, "invalid request body");
+            return;
+        }
+        body.append(buffer, static_cast<size_t>(count));
+    }
+    const Json payload = Json::parse(body);
+    const std::string action = payload["action"].string();
+    std::string error;
+    bool ok = false;
+    if (action == "start")
+        ok = jellyfinLink_.start(payload["server"].string(), error);
+    else if (action == "cancel") {
+        jellyfinLink_.cancel();
+        ok = true;
+    } else if (action == "unlink") {
+        ok = jellyfinLink_.unlink(error);
+        if (ok)
+            homeJellyfin_.refreshNow();
+    } else {
+        fail(400, "action expected");
+        return;
+    }
+    if (!ok) {
+        fail(400, error);
+        return;
+    }
+    Json response = jellyfinLink_.status();
+    response.set("ok", Json::flag(true));
+    respond(200, response);
+}
+
 void HttpFrontDoor::setMemoryToggle(HttpExchange &exchange) const {
     const auto respond = [&exchange](int status, const Json &payload) {
         (void)exchange.respond(status,
@@ -18185,6 +18269,22 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/jellyfin/image" && request.method == "GET") {
         sendHomeJellyfinImage(exchange);
+        return;
+    }
+    if (request.uri == "/api/jellyfin/link") {
+        handleJellyfinLink(exchange);
+        return;
+    }
+    if (request.uri == "/api/home/jellyfin/search" && request.method == "GET") {
+        std::string query;
+        if (!uniqueQueryParameter(request.query, "q", query) || query.size() > 120) {
+            (void)exchange.respond(400, {{"Content-Type", "application/json"}},
+                                   "{\"ok\":false,\"error\":\"bad query\"}");
+            return;
+        }
+        Json result = homeJellyfin_.search(query);
+        result.set("ok", Json::flag(true));
+        (void)exchange.respond(200, {{"Content-Type", "application/json"}}, result.dump());
         return;
     }
     if (request.uri == "/api/home/jellyfin/refresh" && request.method == "POST") {

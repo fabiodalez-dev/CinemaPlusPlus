@@ -15,6 +15,7 @@
 #include "service/home_content.hpp"
 #include "service/home_discover.hpp"
 #include "service/home_jellyfin.hpp"
+#include "service/jellyfin_link.hpp"
 #include "service/home_image_proxy.hpp"
 #include "service/home_picture.hpp"
 #include "service/home_open.hpp"
@@ -380,6 +381,7 @@ class HttpFrontDoor {
     void setRemoteKey(HttpExchange &exchange) const;
     void setPreloadToggle(HttpExchange &exchange) const;
     void setMemoryToggle(HttpExchange &exchange) const;
+    void handleJellyfinLink(HttpExchange &exchange) const;
     void sendHomeJellyfinImage(HttpExchange &exchange) const;
     void ledStripAction(HttpExchange &exchange, const std::string &action) const;
     void sendDashboardSettings(HttpExchange &exchange) const;
@@ -435,6 +437,7 @@ class HttpFrontDoor {
     mutable service::HomeContent homeContent_;
     mutable service::HomeDiscover homeDiscover_;
     mutable service::HomeJellyfin homeJellyfin_;
+    mutable service::JellyfinLink jellyfinLink_;
     mutable service::HomeImageProxy homeImageProxy_;
     std::string configPath_;
     std::string hdmiSeenPath_;

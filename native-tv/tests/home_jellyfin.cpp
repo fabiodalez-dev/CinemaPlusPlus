@@ -94,6 +94,10 @@ int main() {
         const int asked1280 = asked["http://jf.local:8096/Items/" + std::string(kUser) + "/Images/Backdrop/0"];
         check(jf.image(std::string(kUser) + ":Backdrop:1919", bytes), "an odd width");
         check(asked["http://jf.local:8096/Items/" + std::string(kUser) + "/Images/Backdrop/0"] == asked1280, "served from the 1280 file");
+        // Search asks the library with the term encoded, and needs two letters.
+        const Json found = jf.search("it f");
+        check(found["items"].size() == 1 && found["items"][0]["title"].string() == "It Follows", "search results");
+        check(jf.search("i")["items"].size() == 0, "one letter is not a search");
     }
     // Without a connection: unconfigured.
     {
