@@ -47,7 +47,12 @@ Il controller di Cinema (`ambilight.py`) riscritto nel servizio:
 - luce della stanza all'annuncio di spegnimento di LG, registro persistente, riavvio del Bluetooth bloccato al massimo ogni due minuti;
 - impostazioni nella dashboard e nell'app TV: Cerca, Prova, Salva, luminosità separate.
 
+Stato al 1° novembre 2026: fatta. `nativetv-ambilight` (in `native-tv/src/ambilight`) porta il controller di Cinema 0.3.9 in C++ con i suoi test: colori, dissolvenza, luce della stanza all'annuncio di spegnimento, Prova, riavvio del Bluetooth bloccato. Parla con il bus attraverso un solo processo Node.js con `palmbus.js`: un client nativo nostro si registra con un ruolo nelle cartelle volatili ma non riceve i gruppi di permessi del Bluetooth, mentre node li ha. Il servizio lo avvia quando la striscia segue lo schermo e lo riavvia se si ferma; l'hook `56-cinemapp-ledstrip` lo avvia all'accensione anche senza il resto di Native Tv. Dashboard: Display → LED strip. Sulla TV: collegato all'ELK-BLEDOB, luce rossa a schermo spento, file aperti di `webos-bluetooth` fermi.
+
 ### 3. Home nativa di Cinema
+
+Primo passo, 1° novembre 2026: Native Tv Home gira sulla 43UN70006LA con webOS 5.6 lanciando `com.tvweb.dashboard` con `{"screen":"home"}` (OpenGL ES 3.2 sulla Mali, 17 MB). Su webOS 5 non c'è una home di LG da sostituire (la presa di controllo di Native Tv vale per webOS 9 e 10): Cinema++ si apre come Cinema, con il tasto Home tramite LG Input Hook e all'accensione tramite l'ultimo ingresso.
+
 
 - barra delle app Estesa o Compatta, ingressi HDMI con «Nessun segnale»;
 - Live TV dietro i controlli, a schermo intero, cambio canale con CH+ e CH−;
