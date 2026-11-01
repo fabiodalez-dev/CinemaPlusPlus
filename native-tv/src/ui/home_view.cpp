@@ -1,4 +1,5 @@
 // Home and Apps drawn on the kit from the controller's state and the motion engine's values.
+#include "domain/say.hpp"
 #include "ui/application.hpp"
 #include "ui/home_layout.hpp"
 #include "ui/kit/entry.hpp"
@@ -220,10 +221,11 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0) {
                 tile.id = id;
                 bool device = row.key == "dev";
                 bool unused = device && card.data["unused"].boolean();
-                tile.name = device ? "HDMI " + card.data["port"].string("") : card.title;
-                if (device && card.data["port"].string("").empty())
+                tile.name = device ? "HDMI " + portText(card.data["port"]) : card.title;
+                if (device && portText(card.data["port"]).empty())
                     tile.name = card.title;
-                tile.sub = device ? (unused ? "Not connected" : card.title) : card.subtitle;
+                tile.sub = device ? (unused ? say::msg("tv.home.noSignal", "No signal") : card.title)
+                                  : card.subtitle;
                 if (tile.sub == tile.name)
                     tile.sub.clear();
                 tile.icon = device ? "hdmi" : "tv";

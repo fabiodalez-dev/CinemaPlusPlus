@@ -1,5 +1,6 @@
 // Home's choreography: what moves when focus, tab, hero or data change. The view (home_view.cpp)
 // only reads the values set here.
+#include "domain/say.hpp"
 #include "ui/application.hpp"
 #include "ui/controller_helpers.hpp"
 #include "ui/home_layout.hpp"
@@ -95,9 +96,11 @@ HeroText linesOf(const ViewState &state, const Card &card) {
         text.facts = card.subtitle.empty() && card.kind == "youtube" ? "YouTube" : card.subtitle;
         text.description = card.data["overview"].string();
     } else if (card.kind == "dev" || card.kind == "ch") {
-        text.source = card.kind == "dev" ? "Input" : "Channel";
+        text.source = card.kind == "dev" ? say::msg("tv.quick.input", "Input")
+                                         : say::msg("tv.home.hero.channel", "Channel");
         text.facts = card.subtitle;
-        text.hint = card.kind == "dev" ? "Switch" : "Watch";
+        text.hint = card.kind == "dev" ? say::msg("tv.home.hero.switch", "Switch")
+                                       : say::msg("tv.home.hero.watch", "Watch");
     } else {
         text.source = card.id == "lg-home" ? "LG Home" : "Your apps";
         text.facts = card.data["description"].string();

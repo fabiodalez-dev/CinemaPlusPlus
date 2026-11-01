@@ -95,6 +95,11 @@ std::string pictureLabel(const Json &picture) {
     }
     return text;
 }
+// An HDMI port number as the TV sends it, a number or a string: "1", never "1.0".
+std::string portText(const Json &port) {
+    return port.isNumber() ? std::to_string(static_cast<int>(port.number())) : port.string("");
+}
+
 std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover) {
     std::vector<Tab> tabs = {{"home", say::msg("tv.home.tab.home", "Home"), Operation::None}};
     // Cinema's tabs for the Jellyfin library: Film, Serie, Musica, when the server has them.
@@ -167,7 +172,8 @@ CardRow catalogueRow(const std::string &kind, const Json &catalogue, const Json 
             card.image = "app:" + id;
         if (kind == "dev")
             card.subtitle =
-                item["unused"].boolean() ? "Nothing connected" : "HDMI " + item["port"].string();
+                item["unused"].boolean() ? say::msg("tv.quick.nothingConnected", "Nothing connected")
+                                         : "HDMI " + portText(item["port"]);
         if (kind == "ch") {
             card.subtitle = item["number"].string();
             Json programme = guide[id][static_cast<size_t>(0)];
@@ -315,6 +321,13 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     CardRow apps = appsRow(catalogue, guide, false);
     if (!apps.cards.empty())
         result.push_back(apps);
+    // Cinema's wide dock: the HDMI inputs under the apps, one with nothing on it
+    // greyed out with "No signal".
+    if (catalogue["layout"]["dockInputs"].boolean()) {
+        CardRow inputs = catalogueRow("dev", catalogue, guide);
+        if (!inputs.cards.empty())
+            result.push_back(inputs);
+    }
     // The Jellyfin library first, as on Cinema: Continue watching leads.
     const std::map<std::string, std::string> library = {
         {"jf-continue", say::msg("tv.home.row.jfContinue", "Continue watching")},

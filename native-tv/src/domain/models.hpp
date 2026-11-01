@@ -54,6 +54,7 @@ struct Tab {
     std::string key, title;
     Operation operation = Operation::None;
 };
+std::string portText(const Json &port);
 std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover = Json());
 std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, const Json &discover,
                               const Json &guide);

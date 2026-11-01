@@ -334,7 +334,7 @@ def cpp_literals(src, i):
 
 
 SERVER = sorted((ROOT / 'native-tv' / 'src').rglob('*.cpp'))
-SERVER = [f for f in SERVER if 'ui' not in f.relative_to(ROOT / 'native-tv' / 'src').parts[:1]]
+# The TV app's own words (src/ui) count too: Cinema++ shows them in the TV's language.
 for path in SERVER:
     src = path.read_text(encoding='utf-8')
     if 'msg(' not in src and '"srv.' not in src:
