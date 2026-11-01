@@ -39,6 +39,7 @@
 #include "daemon/remote_battery.hpp"
 #include "daemon/remote_buttons.hpp"
 #include "daemon/remote_button_log_watcher.hpp"
+#include "daemon/memory_keeper.hpp"
 #include "daemon/remote_keys_reconciler.hpp"
 #include "daemon/sam_rescan_manager.hpp"
 #include "daemon/screen_time_enforcer.hpp"
@@ -2030,6 +2031,15 @@ int main(int argc, char **argv) {
                 };
                 (void)loop.scheduleAfter(std::chrono::milliseconds(30000), enforce);
                 (void)loop.scheduleEvery(std::chrono::minutes(5), enforce);
+            }
+            // Apps LG's memory manager keeps open (Cinema's keepInMemory):
+            // written at start, counted by memchute from the next restart.
+            if (loaded.config.document.has("keepInMemory")) {
+                const Json keep = loaded.config.document["keepInMemory"];
+                (void)loop.submitBlocking([&logger, keep, systemRoot]() {
+                    (void)applyMemoryKeep(systemRoot, keep,
+                        [&logger](const std::string &message) { logger.info(message); });
+                });
             }
             (void)loop.submitBlocking([&tvAppManager, &logger, fromHbc = access(
                 (dataDirectory() + "/.from-homebrew-channel").c_str(), F_OK) == 0]() {

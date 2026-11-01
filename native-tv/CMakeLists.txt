@@ -76,6 +76,7 @@ add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
   src/daemon/launcher_sync.cpp
   src/daemon/hostname_cache.cpp
   src/daemon/services_keeper.cpp
+  src/daemon/memory_keeper.cpp
   src/daemon/tv_app_manager.cpp
   src/daemon/event_loop.cpp src/daemon/heartbeat.cpp src/daemon/json_file.cpp
   src/daemon/hdmi_seen.cpp src/daemon/last_app.cpp src/daemon/apps_state.cpp
@@ -129,6 +130,7 @@ add_library(nativetv_tv_services src/service/control_commands.cpp
   src/service/screensaver_policy.cpp
   src/service/stats_fields.cpp
   src/service/preload.cpp src/service/lg_settings.cpp src/service/piccap.cpp
+  src/service/memory_keep.cpp
   src/service/privacy_consent.cpp src/service/privacy_service.cpp
   src/service/config_settings.cpp src/service/remote_input.cpp src/service/remote_keys.cpp
   src/service/ssh_keys.cpp
@@ -734,6 +736,10 @@ if(BUILD_TESTING)
   target_compile_options(native-services-keeper-tests PRIVATE -Wall -Wextra -Werror)
   target_compile_definitions(native-services-keeper-tests PRIVATE NATIVETV_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures")
   add_test(NAME native-services-keeper COMMAND native-services-keeper-tests)
+  add_executable(native-memory-keeper-tests tests/memory_keeper.cpp)
+  target_link_libraries(native-memory-keeper-tests PRIVATE nativetv_daemon)
+  target_compile_options(native-memory-keeper-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-memory-keeper COMMAND native-memory-keeper-tests)
   add_executable(native-stats-fields-tests tests/stats_fields.cpp)
   target_link_libraries(native-stats-fields-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-stats-fields-tests PRIVATE -Wall -Wextra -Werror)
@@ -752,6 +758,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-preload-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-preload-tests PRIVATE -Wall -Wextra -Werror)
   add_test(NAME native-preload COMMAND native-preload-tests)
+  add_executable(native-memory-keep-tests tests/memory_keep.cpp)
+  target_link_libraries(native-memory-keep-tests PRIVATE nativetv_tv_services)
+  target_compile_options(native-memory-keep-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-memory-keep COMMAND native-memory-keep-tests)
   add_executable(native-screen-time-runtime-tests tests/screen_time_enforcer.cpp)
   target_link_libraries(native-screen-time-runtime-tests PRIVATE nativetv_daemon)
   target_compile_options(native-screen-time-runtime-tests PRIVATE -Wall -Wextra -Werror)
