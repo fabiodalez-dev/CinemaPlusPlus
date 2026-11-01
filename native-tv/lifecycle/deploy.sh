@@ -75,7 +75,7 @@ SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=accept-n
 [ -n "${NATIVETV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$NATIVETV_KNOWN_HOSTS")
 STAGE=/var/lib/tvweb/.deploy     # on the TV; beside the install so moves are renames
 
-FILES="tvwebctl 56-cinemapp-ledstrip 57-cinemapp-service assets/ui.html assets/favicon.svg \
+FILES="tvwebctl 56-cinemapp-ledstrip 57-cinemapp-service cinemapp-home-key assets/ui.html assets/favicon.svg \
 assets/ui/theme.css assets/ui/ui.css assets/ui/i18n.js assets/ui/core.js assets/ui/theme.js assets/ui/format.js assets/ui/readouts.js \
 assets/ui/server.js assets/ui/controls.js assets/ui/privacy.js assets/ui/lgsettings.js assets/ui/game.js \
 assets/ui/system.js assets/ui/history.js assets/ui/ssh.js assets/ui/screentime.js assets/ui/apps.js assets/ui/install.js assets/ui/home.js assets/ui/tabs.js assets/ui/servicemenu.js \
@@ -98,7 +98,7 @@ assets/google-tv/pages/dashboard/index.html assets/google-tv/pages/dashboard/das
 assets/google-tv/pages/setup/index.html assets/google-tv/pages/setup/setup.css assets/google-tv/pages/setup/setup.js \
 assets/google-tv/pages/setup-phone/index.html assets/google-tv/pages/setup-phone/setup-phone.css assets/google-tv/pages/setup-phone/setup-phone.js \
 assets/screensavers/clock.qml assets/screensavers/fireworks.qml \
-assets/screensavers/starfield.qml assets/screensavers/vitals.qml assets/screensavers/star.png \
+assets/screensavers/starfield.qml assets/screensavers/vitals.qml assets/screensavers/cinema.qml assets/screensavers/star.png \
 assets/screensavers/bokeh.qml assets/screensavers/bokeh.png \
 assets/screensavers/harmonograph.qml assets/screensavers/black.qml \
 assets/screensavers/clock-date.qml assets/screensavers/filament.qml \
@@ -222,6 +222,7 @@ if [ -f "\$D/56-cinemapp-ledstrip" ]; then
     chmod 755 /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new &&
     mv -f /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new /var/lib/webosbrew/init.d/56-cinemapp-ledstrip
 fi
+[ -f "\$D/cinemapp-home-key" ] && chmod 755 "\$D/cinemapp-home-key"
 # Cinema++: its service at boot (Native Tv's full hook stays for --persist).
 if [ -f "\$D/57-cinemapp-service" ]; then
   cp "\$D/57-cinemapp-service" /var/lib/webosbrew/init.d/.57-cinemapp-service.new &&

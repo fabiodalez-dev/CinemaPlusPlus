@@ -1,0 +1,8 @@
+#!/bin/sh
+# Cinema++: the remote's Home key (LG Input Hook, keybinds.json "773": exec).
+# Opens Cinema++ on its Home screen; in the background so the hook, which runs
+# inside LG's input process, never waits. luna-send stays silent and may not
+# send when its stdin is at end of file, so stdin is a pipe held open.
+( sleep 3 | /usr/bin/luna-send -i -n 1 luna://com.webos.applicationManager/launch \
+    '{"id":"com.tvweb.dashboard","params":{"screen":"home"}}' >/dev/null 2>&1 ) </dev/null >/dev/null 2>&1 &
+exit 0
