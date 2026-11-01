@@ -42,6 +42,39 @@ std::string clockText(const ViewState &state) {
         std::snprintf(text, sizeof(text), "%02d:%02d", state.hour, state.minute);
     return text;
 }
+// The date under the clock, "Sunday 1 November" in the display language.
+std::string dateText(const ViewState &state) {
+    std::string day;
+    switch (state.weekday) {
+    case 0: day = say::msg("tv.date.day0", "Sunday"); break;
+    case 1: day = say::msg("tv.date.day1", "Monday"); break;
+    case 2: day = say::msg("tv.date.day2", "Tuesday"); break;
+    case 3: day = say::msg("tv.date.day3", "Wednesday"); break;
+    case 4: day = say::msg("tv.date.day4", "Thursday"); break;
+    case 5: day = say::msg("tv.date.day5", "Friday"); break;
+    case 6: day = say::msg("tv.date.day6", "Saturday"); break;
+    default: return "";
+    }
+    std::string month;
+    switch (state.month) {
+    case 0: month = say::msg("tv.date.month1", "January"); break;
+    case 1: month = say::msg("tv.date.month2", "February"); break;
+    case 2: month = say::msg("tv.date.month3", "March"); break;
+    case 3: month = say::msg("tv.date.month4", "April"); break;
+    case 4: month = say::msg("tv.date.month5", "May"); break;
+    case 5: month = say::msg("tv.date.month6", "June"); break;
+    case 6: month = say::msg("tv.date.month7", "July"); break;
+    case 7: month = say::msg("tv.date.month8", "August"); break;
+    case 8: month = say::msg("tv.date.month9", "September"); break;
+    case 9: month = say::msg("tv.date.month10", "October"); break;
+    case 10: month = say::msg("tv.date.month11", "November"); break;
+    case 11: month = say::msg("tv.date.month12", "December"); break;
+    default: return "";
+    }
+    if (state.day < 1)
+        return "";
+    return day + " " + std::to_string(state.day) + " " + month;
+}
 std::string initialOf(const ViewState &state) {
     std::string name;
     for (const auto &person : state.catalogue["profiles"].items())
@@ -122,6 +155,17 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab) {
     bar.avatarFocus = static_cast<float>(motion.value("f:av"));
     bar.settingsFocus = static_cast<float>(motion.value("f:gr"));
     bar.clock = clockText(state);
+    if (state.catalogue["layout"]["showDate"].boolean(true))
+        bar.date = dateText(state);
+    // Jellyfin's state beside the date, only when the library cannot be read.
+    const std::string library = state.discover["jellyfin"].string();
+    std::string warning;
+    if (library == "offline")
+        warning = say::msg("tv.home.jellyfinOffline", "Jellyfin is not answering");
+    else if (library == "unauthorized")
+        warning = say::msg("tv.home.jellyfinSignedOut", "Jellyfin: sign in again");
+    if (!warning.empty())
+        bar.date = bar.date.empty() ? warning : warning + " · " + bar.date;
     kit::topBar(paint, bar);
     if (state.discover["titlesEnabled"].boolean()) {
         kit::RoundButton search;
@@ -133,7 +177,7 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab) {
         kit::roundButton(paint, search);
     }
     if (state.catalogue["layout"]["picture"].boolean() && !home.editing)
-        paint.glyphs.text(paint.scene, {800, 136, 1040, kit::type::labelM.line},
+        paint.glyphs.text(paint.scene, {800, bar.date.empty() ? 136.0f : 172.0f, 1040, kit::type::labelM.line},
                           pictureLabel(home.picture), kit::type::labelM, kit::color::onSurface3,
                           Node::Align::Right);
 }

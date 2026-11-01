@@ -231,6 +231,13 @@ class EditorScreen final : public ScreenView {
                     card.title = item["title"].string();
                     card.subtitle = titleFacts(item);
                     card.image = artwork(item);
+                    if (item["source"].string() == "jellyfin") {
+                        // From the library: its own artwork, and a mark that OK opens the client.
+                        card.kind = "jellyfin";
+                        std::string facts = item["year"].isNumber() ? std::to_string(int(item["year"].number())) : "";
+                        card.subtitle = facts.empty() ? "Jellyfin" : "Jellyfin · " + facts;
+                        card.image = item["image"].isString() ? "jellyfin:" + item["image"].string() + ":640" : "";
+                    }
                     card.data = item;
                     results_.push_back(card);
                 }
@@ -442,6 +449,18 @@ class EditorScreen final : public ScreenView {
         if (selected_ >= results_.size())
             return;
         const Json &item = results_[selected_].data;
+        if (results_[selected_].kind == "jellyfin") {
+            Json body = Json::object();
+            body.set("kind", Json::text("jellyfin"));
+            body.set("id", item["id"]);
+            body.set("action", Json::text("details"));
+            Write write;
+            write.operation = Operation::OpenHomeItem;
+            write.body = [body](const Json &) { return body; };
+            write.failure = msg("tv.details.openFailed", "That did not open");
+            host.optimistic().run("search.open", write);
+            return;
+        }
         details_.reset(new DetailsScreen(item["type"].string(), item["id"].string(), item, true));
         details_->enter(host);
         host.invalidate();

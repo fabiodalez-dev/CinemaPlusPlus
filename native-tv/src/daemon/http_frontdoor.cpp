@@ -379,6 +379,7 @@ bool adminRoute(const HttpRequest &request) {
     const std::string &uri = request.uri;
     return uri == "/api/apps/uninstall" || uri == "/api/ssh" || uri == "/api/services/toggle" ||
            uri == "/api/backup" || uri == "/api/settings" || uri == "/api/admin/pin" ||
+           uri == "/api/jellyfin/link" ||
            uri.compare(0, 18, "/api/apps/install/") == 0;
 }
 
@@ -10974,6 +10975,10 @@ void HttpFrontDoor::handleJellyfinLink(HttpExchange &exchange) const {
         fail(405, "method not allowed");
         return;
     }
+    // Linking writes the library's token: an admin route (see adminRoute), and
+    // never from another site, with or without an Origin header.
+    if (rejectCrossSitePost(exchange))
+        return;
     if (!setupJsonContentType(request)) {
         fail(415, "Content-Type must be application/json");
         return;
@@ -16675,6 +16680,28 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
     if (kind == "search") {
         const bool hasQuery = uniqueQueryParameter(request.query, "q", query);
         result = homeContent_.search(key, query, hasQuery);
+        // The Jellyfin library first, as Cinema searches it: its titles open in
+        // the Jellyfin client, the rest in their details.
+        if (hasQuery && homeJellyfin_.feed()["state"].string() == "online") {
+            const Json library = homeJellyfin_.search(query)["items"];
+            result.set("ok", Json::flag(true));
+            result.set("enabled", Json::flag(true));
+            if (!result["items"].isArray())
+                result.set("items", Json::array());
+            if (library.size()) {
+                Json merged = Json::array();
+                for (const Json &item : library.items()) {
+                    Json entry = item;
+                    entry.set("source", Json::text("jellyfin"));
+                    merged.add(entry);
+                }
+                for (const Json &item : result["items"].items())
+                    merged.add(item);
+                result.set("ok", Json::flag(true));
+                result.set("enabled", Json::flag(true));
+                result.set("items", merged);
+            }
+        }
     } else if (kind == "netflix") {
         result = homeContent_.netflix(key, netflixEnabled,
                                       hasType ? tmdbType : "",
@@ -16705,6 +16732,9 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
         result.set("rows", rows);
     }
     result.set("jellyfin", Json::text(jellyfin["state"].string("unconfigured")));
+    // Search finds titles in the library too, with or without TMDB.
+    if (jellyfin["state"].string() == "online")
+        result.set("titlesEnabled", Json::flag(true));
     if (jellyfin["user"].isString()) result.set("jellyfinUser", jellyfin["user"]);
     if (result["enabled"].boolean() && result["rows"].isArray() &&
         result["rows"].size())

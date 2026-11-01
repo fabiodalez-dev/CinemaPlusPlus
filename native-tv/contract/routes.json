@@ -675,6 +675,42 @@
       "notes": "The daemon validates open/close actions against the current recent list. Close operations stop running native or web apps, confirm exit with retries before removing selected cards, and preserve newly added or Home cards. Node retains standalone and startup-fallback handling."
     },
     {
+      "paths": ["/api/jellyfin/link"],
+      "methods": ["GET", "POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; POST is an admin route (admin PIN)",
+      "bodyLimit": {"max": 4096, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Quick Connect with Jellyfin: GET reports the state and polls a waiting code; POST starts, cancels or unlinks. Writes Cinema's root-only /var/lib/launch-home-cinema/jellyfin.json; the token is never returned."
+    },
+    {
+      "paths": ["/api/home/jellyfin/refresh"],
+      "methods": ["POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present",
+      "bodyLimit": {"max": 4096, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Asks the Jellyfin rows on Home to refresh now."
+    },
+    {
+      "paths": ["/api/memory/toggle"],
+      "methods": ["POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; requires allowControl",
+      "bodyLimit": {"max": 4096, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Adds or removes an app from the apps kept open (memchute's file, shared with Cinema)."
+    },
+    {
+      "paths": ["/api/ledstrip", "/api/ledstrip/scan", "/api/ledstrip/preview"],
+      "methods": ["POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; requires allowControl",
+      "bodyLimit": {"max": 4096, "unit": "bytes"},
+      "owner": "native",
+      "notes": "The LED strip: save the settings, look for strips in range, or show a colour for a few seconds."
+    },
+    {
       "paths": ["/api/home/beat"],
       "methods": ["POST"],
       "auth": "token",

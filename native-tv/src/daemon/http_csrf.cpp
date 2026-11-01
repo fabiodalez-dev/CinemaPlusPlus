@@ -59,6 +59,12 @@ const GuardedRoute kGuardedRoutes[] = {
     {"/api/setup/network", ContentTypeRule::JsonPrefix},
     {"/api/setup/done", ContentTypeRule::JsonPrefix},
     {"/api/setup/always-ready", ContentTypeRule::JsonPrefix},
+    {"/api/jellyfin/link", ContentTypeRule::JsonPrefix},
+    {"/api/home/jellyfin/refresh", ContentTypeRule::JsonPrefix},
+    {"/api/memory/toggle", ContentTypeRule::JsonPrefix},
+    {"/api/ledstrip", ContentTypeRule::JsonPrefix},
+    {"/api/ledstrip/scan", ContentTypeRule::JsonPrefix},
+    {"/api/ledstrip/preview", ContentTypeRule::JsonPrefix},
 };
 
 const GuardedRoute *guardedRoute(const std::string &path) {

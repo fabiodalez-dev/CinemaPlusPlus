@@ -273,6 +273,11 @@ void topBar(Paint paint, const TopBar &bar) {
     roundButton(paint, settings);
 
     text(paint, geometry::clock(), bar.clock, type::clock, color::onSurface, Node::Align::Right);
+    if (!bar.date.empty()) {
+        const Rect clock = geometry::clock();
+        text(paint, {clock.x + clock.w - 520, layout::navTop + layout::navH + 2, 520, type::labelM.line},
+             bar.date, type::labelM, color::onSurface2, Node::Align::Right);
+    }
 }
 
 // ---- Hero and pagination -----------------------------------------------------------------------

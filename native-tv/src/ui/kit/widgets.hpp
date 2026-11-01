@@ -65,6 +65,7 @@ struct TopBar {
     float avatarFocus = 0, settingsFocus = 0;
     bool settingsSelected = false;
     std::string clock;
+    std::string date; // under the clock; empty for none
     Enter enter;
 };
 // Tab boxes for the bar's tabs, so the view can aim the pill's springs at them.

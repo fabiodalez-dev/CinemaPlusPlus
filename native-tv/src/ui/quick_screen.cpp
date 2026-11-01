@@ -74,7 +74,8 @@ struct LayoutSwitch {
 };
 const LayoutSwitch kSwitches[] = {{"clockFormat", "clock"}, {"appNames", "apps"},
                                   {"showLive", "tv"},       {"showInputs", "hdmi"},
-                                  {"showLgHome", "home"},   {"picture", "display"}};
+                                  {"showLgHome", "home"},   {"picture", "display"},
+                                  {"showDate", "clock"},    {"dockInputs", "hdmi"}};
 const char *kSleep[] = {"off", "10", "30", "60", "90", "120"};
 
 double clamp(double value, double low, double high) {
@@ -365,7 +366,7 @@ class QuickScreen final : public ScreenView {
     static bool layoutServer(const ScreenHost &host, const std::string &key) {
         Json layout = host.view().catalogue["layout"];
         return key == "clockFormat"                                                 ? layout["clockFormat"].string() == "24h"
-               : key == "appNames" || key == "showInputs" || key == "showLgHome" ? layout[key].boolean(true)
+               : key == "appNames" || key == "showInputs" || key == "showLgHome" || key == "showDate" ? layout[key].boolean(true)
                                                                                   : layout[key].boolean(false);
     }
     bool layoutFlag(ScreenHost &host, const std::string &key) {
@@ -531,6 +532,8 @@ class QuickScreen final : public ScreenView {
         } else {
             static const std::vector<std::pair<std::string, std::string>> titles = {
                 {"clockFormat", msg("tv.quick.clock24", "24-hour clock")},
+                {"showDate", msg("tv.quick.showDate", "Date under the clock")},
+                {"dockInputs", msg("tv.quick.dockInputs", "Inputs row on Home")},
                 {"appNames", msg("tv.quick.appNames", "App names")},
                 {"showLive", msg("tv.quick.showLive", "Live tab")},
                 {"showInputs", msg("tv.quick.showInputs", "Inputs tab")},

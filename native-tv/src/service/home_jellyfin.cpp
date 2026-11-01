@@ -372,7 +372,15 @@ Json HomeJellyfin::search(const std::string &query) {
     const Json found = items(c, "/Users/" + c.userId + "/Items?Recursive=true&SearchTerm=" + urlEncode(query) +
                                     "&IncludeItemTypes=Movie,Series,MusicAlbum,Audio,MusicArtist&" + kFields +
                                     "&Limit=24", status);
-    result.set("items", found);
+    // Films and series before music, each in the server's order.
+    Json ordered = Json::array();
+    for (int pass = 0; pass < 2; ++pass)
+        for (const Json &item : found.items()) {
+            const std::string type = item["type"].string();
+            if ((type == "Movie" || type == "Series") == (pass == 0))
+                ordered.add(item);
+        }
+    result.set("items", ordered);
     return result;
 }
 

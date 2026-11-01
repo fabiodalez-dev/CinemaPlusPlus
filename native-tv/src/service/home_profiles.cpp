@@ -14,7 +14,7 @@ const char *kColors[] = {"#a8c7fa", "#f2b8b5", "#6dd58c", "#ffb74d",
                          "#7fcfff", "#d0bcff"};
 const char *kLayoutKeys[] = {"rows", "order", "sort", "hidden", "kinds", "channels",
                              "picture", "appNames", "clockFormat", "showInputs",
-                             "showLgHome", "showLive", "colours", "dockInputs"};
+                             "showLgHome", "showLive", "colours", "dockInputs", "showDate"};
 const char *kPromoApps[] = {"com.webos.app.lgchannels",
                             "com.webos.app.sportsteamsettings",
                             "com.webos.app.lifeonscreen", "amazon.alexa.view",
@@ -172,6 +172,7 @@ Json defaultDocument() {
     document.set("showLive", Json::flag(false));
     // Cinema++: the HDMI inputs as a row under the apps on Per te, as Cinema's wide dock.
     document.set("dockInputs", Json::flag(false));
+    document.set("showDate", Json::flag(true));
     document.set("openOnPowerOn", Json::flag(false));
     document.set("colours", Json::parse("null"));
     document.set("profiles", Json::array());
@@ -352,6 +353,7 @@ Json normalizeHomeDocument(const Json &raw) {
     result.set("showLgHome", Json::flag(!raw["showLgHome"].valid() || raw["showLgHome"].boolean(true)));
     result.set("showLive", Json::flag(raw["showLive"].boolean()));
     result.set("dockInputs", Json::flag(raw["dockInputs"].boolean()));
+    result.set("showDate", Json::flag(raw["showDate"].boolean(true)));
     result.set("openOnPowerOn", Json::flag(raw["openOnPowerOn"].boolean()));
     result.set("colours", validColours(raw["colours"]));
 
@@ -462,7 +464,7 @@ HomeDocumentUpdate updateHomeLayout(const Json &input, const Json &body) {
     const Json availableChannels = body.has("channels") ? body["channels"] : current["channels"];
     proposed.set("channels", strings(ordered(stringList(channelOrder),
         stringList(availableChannels, kMaximumChannels))));
-    const char *booleanKeys[] = {"picture", "appNames", "showInputs", "showLgHome", "showLive", "dockInputs"};
+    const char *booleanKeys[] = {"picture", "appNames", "showInputs", "showLgHome", "showLive", "dockInputs", "showDate"};
     for (const char *key : booleanKeys)
         proposed.set(key, body[key].isBoolean() ? body[key] : current[key]);
     proposed.set("clockFormat", Json::text(body["clockFormat"].string() == "12h" ||
