@@ -1915,6 +1915,7 @@
 "tv.live.noChannel": {"text": "Nessun canale {n}", "from": "No channel {n}"},
 "tv.live.noReading": {"text": "Ancora nessuna lettura", "from": "No reading yet"},
 "tv.live.noSensor": {"text": "Nessun sensore su questa TV", "from": "No sensor on this TV"},
+"tv.live.noSignal": {"text": "Nessun segnale su HDMI {port}", "from": "No signal on HDMI {port}"},
 "tv.live.normal": {"text": "Normale", "from": "Normal"},
 "tv.live.ofTotal": {"text": "di {total} GB", "from": "of {total} GB"},
 "tv.live.opening": {"text": "Apro il sintonizzatore…", "from": "Opening the tuner…"},

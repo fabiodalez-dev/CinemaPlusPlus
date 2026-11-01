@@ -46,6 +46,13 @@ Json LiveTv::tune(const std::string &channelId) {
 }
 
 Json LiveTv::closeLocked() {
+    if (!pipelineId_.empty()) {
+        Json payload = Json::object();
+        payload.set("pipelineId", Json::text(pipelineId_));
+        (void)call_("luna://com.webos.service.utp.extinputs/close", payload);
+    }
+    pipelineId_.clear();
+    source_.clear();
     if (!broadcastId_.empty()) {
         Json payload = Json::object();
         payload.set("broadcastId", Json::text(broadcastId_));
@@ -74,8 +81,39 @@ Json LiveTv::act(const Json &request) {
         if (!validWindowId(window)) return fail("windowId expected");
         const std::string app = request["appId"].string(kDefaultApp);
         if (!validChannelId(app)) return fail("appId expected");
-        // A window already showing the broadcast keeps it; another one gets its own.
-        if (!broadcastId_.empty() && window != windowId_) (void)closeLocked();
+        const std::string source = request["source"].string("tv");
+        int port = 0;
+        if (source.size() == 6 && source.compare(0, 5, "hdmi:") == 0 && source[5] >= '1' && source[5] <= '4')
+            port = source[5] - '0';
+        else if (source != "tv")
+            return fail("source expected");
+        // A window already showing this source keeps it; another window or source starts again.
+        if ((!broadcastId_.empty() || !pipelineId_.empty()) && (window != windowId_ || source != source_))
+            (void)closeLocked();
+        if (port) {
+            if (pipelineId_.empty()) {
+                Json options = Json::object();
+                options.set("appId", Json::text(app));
+                options.set("windowId", Json::text(window));
+                Json payload = Json::object();
+                payload.set("inputSourceType", Json::text("HDMI"));
+                payload.set("options", options);
+                const Json opened = call_("luna://com.webos.service.utp.extinputs/open", payload);
+                if (!opened["pipelineId"].isString()) return fail("the input did not open");
+                pipelineId_ = opened["pipelineId"].string();
+                windowId_ = window;
+                source_ = source;
+                Json change = Json::object();
+                change.set("pipelineId", Json::text(pipelineId_));
+                change.set("portId", Json::numeric(port));
+                if (!call_("luna://com.webos.service.utp.extinputs/switchExternalInput", change)["returnValue"].boolean())
+                    return fail("the input did not open");
+            }
+            result.set("ok", Json::flag(true));
+            result.set("playing", Json::flag(true));
+            result.set("source", Json::text(source_));
+            return result;
+        }
         if (broadcastId_.empty()) {
             Json options = Json::object();
             options.set("appId", Json::text(app));
@@ -86,6 +124,7 @@ Json LiveTv::act(const Json &request) {
             if (!opened["broadcastId"].isString()) return fail("the tuner did not open");
             broadcastId_ = opened["broadcastId"].string();
             windowId_ = window;
+            source_ = "tv";
             Json mute = Json::object();
             mute.set("broadcastId", Json::text(broadcastId_));
             mute.set("isMuteOn", Json::flag(false));
@@ -109,6 +148,7 @@ Json LiveTv::act(const Json &request) {
     }
     result.set("ok", Json::flag(true));
     result.set("playing", Json::flag(!broadcastId_.empty()));
+    result.set("source", Json::text(source_));
     result.set("channelId", Json::text(channelId_));
     return result;
 }
@@ -117,7 +157,8 @@ Json LiveTv::state() const {
     std::lock_guard<std::mutex> lock(mutex_);
     Json result = Json::object();
     result.set("ok", Json::flag(true));
-    result.set("playing", Json::flag(!broadcastId_.empty()));
+    result.set("playing", Json::flag(!broadcastId_.empty() || !pipelineId_.empty()));
+    result.set("source", Json::text(source_));
     result.set("channelId", Json::text(channelId_));
     return result;
 }

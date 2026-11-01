@@ -1,0 +1,12 @@
+#!/bin/sh
+# Cinema++: the service at every boot, without Native Tv's own boot flow (its
+# splash and Home takeover are for webOS 9 and 10). Installed by deploy.sh to
+# /var/lib/webosbrew/init.d/57-cinemapp-service; remove it to stop.
+# Never blocks boot: the start waits in the background for the bus to settle.
+CTL=/var/lib/tvweb/tvwebctl
+[ -x "$CTL" ] || exit 0
+# The full Native Tv hook, when installed, starts the service itself.
+[ -x /var/lib/webosbrew/init.d/50-tvweb ] && exit 0
+mkdir /tmp/cinemapp-service-started 2>/dev/null || exit 0
+(sleep 15; "$CTL" start >/dev/null 2>&1) </dev/null >/dev/null 2>&1 &
+exit 0

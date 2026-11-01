@@ -23,9 +23,11 @@ class LiveTv {
 
     explicit LiveTv(std::string runDirectory, Call call = Call());
 
-    // {"action": "open", "windowId", "appId"?, "channelId"?} opens the tuner in the window,
-    // on the given channel or the last one; {"action": "tune", "channelId"} changes channel;
-    // {"action": "close"} closes it. The reply carries "playing" and "channelId".
+    // {"action": "open", "windowId", "appId"?, "source"?, "channelId"?} opens a source in the
+    // window: "tv" (the default) on the given channel or the last one, or "hdmi:1".."hdmi:4"
+    // (utp.extinputs, as the browser plays ext://hdmi:N); {"action": "tune", "channelId"}
+    // changes channel; {"action": "close"} closes it. The reply carries "playing", "source"
+    // and "channelId".
     Json act(const Json &request);
     Json state() const;
 
@@ -38,6 +40,8 @@ class LiveTv {
     std::unique_ptr<ambilight::NodeBus> bus_;
     mutable std::mutex mutex_;
     std::string broadcastId_, windowId_, channelId_;
+    std::string source_;      // "tv" or "hdmi:N"
+    std::string pipelineId_;  // an HDMI input's pipeline
 };
 
 // The window id an SDL app gets for an exported window ("_Window_Id_12").

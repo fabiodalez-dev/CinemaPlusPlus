@@ -1,3 +1,4 @@
+#include "domain/say.hpp"
 #include "ui/application.hpp"
 #include "ui/controller_helpers.hpp"
 #include <algorithm>
@@ -128,9 +129,30 @@ void Application::execute(const Command &command) {
     }
     // A channel on the Live tab changes the picture behind the page instead of leaving Home.
     if (command.operation == Operation::OpenHomeItem && command.body["kind"].string() == "ch" &&
-        state_.live.open && liveTab()) {
+        state_.live.open && state_.live.source == "tv" && liveTab()) {
         liveTune(command.body["id"].string(), true);
         return;
+    }
+    // An input on the Inputs tab plays behind the page first; OK on the input playing opens it
+    // full screen, as LG's input does.
+    if (command.operation == Operation::OpenHomeItem && command.body["kind"].string() == "dev" &&
+        videoPlane_ && liveTab()) {
+        std::string port;
+        bool unused = false;
+        for (const Json &device : state_.catalogue["devices"].items())
+            if (device["id"].string() == command.body["id"].string()) {
+                port = portText(device["port"]);
+                unused = device["unused"].boolean();
+            }
+        if (!port.empty() && state_.live.source != "hdmi:" + port) {
+            state_.live.pick = "hdmi:" + port;
+            state_.live.status = unused ? say::msg("tv.live.noSignal", "No signal on HDMI {port}",
+                                                   fields({{"port", Json::text(port)}}))
+                                        : std::string();
+            dirty_ = true;
+            return;
+        }
+        liveClose();
     }
     if (command.operation == Operation::None || state_.busy)
         return;

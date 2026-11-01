@@ -75,7 +75,7 @@ SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=accept-n
 [ -n "${NATIVETV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$NATIVETV_KNOWN_HOSTS")
 STAGE=/var/lib/tvweb/.deploy     # on the TV; beside the install so moves are renames
 
-FILES="tvwebctl 56-cinemapp-ledstrip assets/ui.html assets/favicon.svg \
+FILES="tvwebctl 56-cinemapp-ledstrip 57-cinemapp-service assets/ui.html assets/favicon.svg \
 assets/ui/theme.css assets/ui/ui.css assets/ui/i18n.js assets/ui/core.js assets/ui/theme.js assets/ui/format.js assets/ui/readouts.js \
 assets/ui/server.js assets/ui/controls.js assets/ui/privacy.js assets/ui/lgsettings.js assets/ui/game.js \
 assets/ui/system.js assets/ui/history.js assets/ui/ssh.js assets/ui/screentime.js assets/ui/apps.js assets/ui/install.js assets/ui/home.js assets/ui/tabs.js assets/ui/servicemenu.js \
@@ -221,6 +221,12 @@ if [ -f "\$D/56-cinemapp-ledstrip" ]; then
   cp "\$D/56-cinemapp-ledstrip" /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new &&
     chmod 755 /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new &&
     mv -f /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new /var/lib/webosbrew/init.d/56-cinemapp-ledstrip
+fi
+# Cinema++: its service at boot (Native Tv's full hook stays for --persist).
+if [ -f "\$D/57-cinemapp-service" ]; then
+  cp "\$D/57-cinemapp-service" /var/lib/webosbrew/init.d/.57-cinemapp-service.new &&
+    chmod 755 /var/lib/webosbrew/init.d/.57-cinemapp-service.new &&
+    mv -f /var/lib/webosbrew/init.d/.57-cinemapp-service.new /var/lib/webosbrew/init.d/57-cinemapp-service
 fi
 if [ -n "$PERSIST" ]; then
   mkdir -p /var/lib/webosbrew/init.d

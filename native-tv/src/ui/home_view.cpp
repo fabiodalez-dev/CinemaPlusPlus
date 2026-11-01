@@ -475,7 +475,7 @@ void drawHome(kit::Paint paint, const Frame &frame) {
         return;
     const bool apps = home.tabs[home.tab].key == "apps";
     // Live TV: the page is see-through over the broadcast, with veils for the bar and the rows.
-    if (state.live.open && home.tabs[home.tab].key == "live") {
+    if (state.live.open && (home.tabs[home.tab].key == "live" || home.tabs[home.tab].key == "inputs")) {
         drawLive(paint, frame);
         drawTopBar(paint, frame, static_cast<int>(home.tab));
         if (static_cast<float>(motion.value("livectl")) < .999f)

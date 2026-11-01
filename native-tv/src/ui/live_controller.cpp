@@ -29,7 +29,15 @@ double numberOf(const Json &channel) {
 bool Application::liveTab() const {
     const auto &home = state_.home;
     return state_.screen == Screen::Home && !screen_ && home.tab < home.tabs.size() &&
-           home.tabs[home.tab].key == "live" && flow_.pendingTab < 0;
+           (home.tabs[home.tab].key == "live" || home.tabs[home.tab].key == "inputs") &&
+           flow_.pendingTab < 0;
+}
+
+// What should play now: the tuner on the Live tab, the input picked on the Inputs tab.
+std::string Application::liveSource() const {
+    if (!liveTab())
+        return "";
+    return state_.home.tabs[state_.home.tab].key == "live" ? "tv" : state_.live.pick;
 }
 
 // Watchable channels in number order, as LG's own CH+/CH- go.
@@ -47,17 +55,35 @@ std::vector<Json> Application::liveChannels() const {
 void Application::liveSync() {
     auto &live = state_.live;
     // Without a video plane (a desktop run) the Live tab stays a row of channels.
-    const bool want = active_ && videoPlane_ && liveTab();
+    if (!liveTab())
+        live.pick.clear();
+    const std::string source = active_ && videoPlane_ ? liveSource() : std::string();
+    const bool want = !source.empty();
+    if (want && live.open && source != live.source) {
+        // Another input on the same window: the service closes the old one first.
+        live.source = source;
+        live.channelId.clear();
+        live.targetId.clear();
+        Json body = Json::object();
+        body.set("action", Json::text("open"));
+        body.set("windowId", Json::text(live.windowId));
+        body.set("source", Json::text(source));
+        (void)services_.write("live", Operation::Live, body);
+        liveShowControls();
+    }
     if (want && !live.open) {
         live.windowId = videoPlane_(true);
         if (live.windowId.empty())
             return;
         live.open = true;
+        live.source = source;
         live.channelId.clear();
-        live.status = say::msg("tv.live.opening", "Opening the tuner…");
+        if (source == "tv")
+            live.status = say::msg("tv.live.opening", "Opening the tuner…");
         Json body = Json::object();
         body.set("action", Json::text("open"));
         body.set("windowId", Json::text(live.windowId));
+        body.set("source", Json::text(source));
         (void)services_.write("live", Operation::Live, body);
         live.controls = true;
         liveControlsUntil_ = now_ + kControlsMs;
@@ -99,8 +125,10 @@ void Application::liveSync() {
 
 void Application::liveClose() {
     auto &live = state_.live;
-    if (!live.open)
+    if (!live.open) {
+        live.pick.clear();
         return;
+    }
     Json body = Json::object();
     body.set("action", Json::text("close"));
     (void)services_.write("live", Operation::Live, body);
@@ -188,7 +216,7 @@ bool Application::liveKey(Key key) {
     auto &live = state_.live;
     if (!live.open || !liveTab())
         return false;
-    if (key == Key::PageUp || key == Key::PageDown) {
+    if ((key == Key::PageUp || key == Key::PageDown) && live.source == "tv") {
         liveZap(key == Key::PageUp ? 1 : -1);
         return true;
     }

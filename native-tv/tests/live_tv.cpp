@@ -29,12 +29,16 @@ int main() {
     LiveTv live("/tmp/unused", [&](const std::string &uri, const Json &payload) {
         const std::string method = uri.substr(uri.rfind('/') + 1);
         calls.push_back(method + " " + payload.dump());
+        if (uri.find("extinputs/open") != std::string::npos)
+            return object(R"({"pipelineId":"p-1","returnValue":true})");
         if (method == "open") {
             ++opened;
             return object(R"({"broadcastId":"b-)" + std::to_string(opened) + R"(","returnValue":true})");
         }
         if (method == "getLastChannelId") return object(R"({"channelId":"1_38_6_6","returnValue":true})");
         if (method == "changeChannel") return object(R"({"returnValue":true})");
+        if (uri.find("extinputs/open") != std::string::npos)
+            return object(R"({"pipelineId":"p-1","returnValue":true})");
         return object(R"({"returnValue":true})");
     });
 
@@ -59,7 +63,18 @@ int main() {
     check(opened == 2 && calls[0].compare(0, 5, "close") == 0 && calls[0].find("b-1") != std::string::npos,
           "the old broadcast closed");
 
+    // An HDMI input in the same window: the broadcast closes, the input opens on its port.
+    calls.clear();
+    reply = live.act(object(R"({"action":"open","windowId":"_Window_Id_23","source":"hdmi:2"})"));
+    check(reply["ok"].boolean() && reply["source"].string() == "hdmi:2", "hdmi opened");
+    check(calls[0].compare(0, 5, "close") == 0 && calls[1].find("\"HDMI\"") != std::string::npos &&
+              calls[2].find("\"portId\":2") != std::string::npos,
+          "broadcast closed, input opened on port 2");
+    check(!live.act(object(R"({"action":"open","windowId":"_Window_Id_23","source":"hdmi:9"})"))["ok"].boolean(),
+          "no port 9");
+    calls.clear();
     reply = live.act(object(R"({"action":"close"})"));
+    check(calls[0].find("p-1") != std::string::npos, "the input's pipeline closed");
     check(!reply["playing"].boolean() && !live.state()["playing"].boolean(), "closed");
     std::cout << "live tv tests passed\n";
     return 0;

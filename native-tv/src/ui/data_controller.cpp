@@ -67,7 +67,8 @@ void Application::response(const Response &response) {
         if (!live.open)
             return;
         if (response.ok() && data["ok"].boolean()) {
-            live.status.clear();
+            if (live.source == "tv")
+                live.status.clear();
             if (data["channelId"].isString() && !data["channelId"].string().empty())
                 live.channelId = data["channelId"].string();
             if (live.targetId.empty()) {

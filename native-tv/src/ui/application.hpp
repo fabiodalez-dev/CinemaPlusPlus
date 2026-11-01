@@ -87,6 +87,8 @@ struct LiveState {
     bool controls = true;   // the page over the picture is shown
     bool banner = false;    // the channel banner is shown
     std::string windowId, channelId, targetId, typed, status;
+    std::string source; // what plays: "tv" or "hdmi:N"
+    std::string pick;   // the input chosen on the Inputs tab, played behind it
 };
 struct ViewState {
     Screen screen = Screen::Home;
@@ -145,6 +147,7 @@ class Application : private ScreenHost {
     std::function<std::string(bool)> videoPlane_;
     uint32_t liveControlsUntil_ = 0, liveBannerUntil_ = 0, liveTuneAt_ = 0, liveTypedAt_ = 0;
     bool liveTab() const;
+    std::string liveSource() const;
     void liveSync();
     void liveClose();
     bool liveKey(Key key);
