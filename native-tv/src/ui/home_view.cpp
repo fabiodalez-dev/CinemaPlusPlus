@@ -176,6 +176,23 @@ void drawTopBar(kit::Paint paint, const Frame &frame, int pageTab) {
         search.focus = static_cast<float>(motion.value("f:sr"));
         kit::roundButton(paint, search);
     }
+    // The weather now, left of the round buttons, as on Cinema's bar.
+    const Json now = state.discover["weather"]["now"];
+    if (now["temp"].isNumber()) {
+        Rect gear = kit::geometry::settingsButton();
+        float right = (state.discover["titlesEnabled"].boolean() ? gear.x - layout::circle - 24 : gear.x) - 24;
+        const float y = layout::navTop + (layout::navH - kit::type::clock.line) / 2;
+        paint.glyphs.text(paint.scene, {right - 84, y, 84, kit::type::clock.line},
+                          std::to_string(static_cast<int>(now["temp"].number())) + "°", kit::type::clock,
+                          kit::color::onSurface, Node::Align::Right);
+        std::string icon = now["icon"].string("cloudy");
+        if (icon == "clear" && !now["day"].boolean(true))
+            icon = "night";
+        else if (icon == "clear")
+            icon = "sunny";
+        paint.glyphs.icon(paint.scene, {right - 84 - 44, layout::navTop + (layout::navH - 40) / 2, 40, 40},
+                          "weather-" + icon, kit::color::onSurface);
+    }
     if (state.catalogue["layout"]["picture"].boolean() && !home.editing)
         paint.glyphs.text(paint.scene, {800, bar.date.empty() ? 136.0f : 172.0f, 1040, kit::type::labelM.line},
                           pictureLabel(home.picture), kit::type::labelM, kit::color::onSurface3,

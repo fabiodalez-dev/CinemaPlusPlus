@@ -675,6 +675,24 @@
       "notes": "The daemon validates open/close actions against the current recent list. Close operations stop running native or web apps, confirm exit with retries before removing selected cards, and preserve newly added or Home cards. Node retains standalone and startup-fallback handling."
     },
     {
+      "paths": ["/api/home/weather/search"],
+      "methods": ["GET"],
+      "auth": "token",
+      "csrf": "read-only",
+      "bodyLimit": {"max": 0, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Places for a name from Open-Meteo's geocoding, in the dashboard's language."
+    },
+    {
+      "paths": ["/api/home/weather"],
+      "methods": ["GET", "POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; POST requires allowControl unless from TV loopback",
+      "bodyLimit": {"max": 4096, "unit": "bytes"},
+      "owner": "native",
+      "notes": "The weather on Home from Open-Meteo: GET the forecast (also in /api/home/discover), GET search?q= for places, POST enabled, units and place."
+    },
+    {
       "paths": ["/api/jellyfin/link"],
       "methods": ["GET", "POST"],
       "auth": "token",

@@ -144,7 +144,7 @@ add_library(nativetv_tv_services src/service/control_commands.cpp
   src/service/home_recent_history.cpp
   src/service/home_picture.cpp src/service/home_now.cpp
   src/service/home_open.cpp
-  src/service/home_content.cpp src/service/home_discover.cpp src/service/home_jellyfin.cpp src/service/jellyfin_link.cpp
+  src/service/home_content.cpp src/service/home_discover.cpp src/service/home_jellyfin.cpp src/service/jellyfin_link.cpp src/service/home_weather.cpp
   src/service/home_image_proxy.cpp)
 target_link_libraries(nativetv_tv_services PUBLIC nativetv_core nativetv_names
   PkgConfig::CURL ZLIB::ZLIB)
@@ -780,6 +780,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-jellyfin-link-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-jellyfin-link-tests PRIVATE -Wall -Wextra -Werror)
   add_test(NAME native-jellyfin-link COMMAND native-jellyfin-link-tests)
+  add_executable(native-home-weather-tests tests/home_weather.cpp)
+  target_link_libraries(native-home-weather-tests PRIVATE nativetv_tv_services)
+  target_compile_options(native-home-weather-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-home-weather COMMAND native-home-weather-tests)
   add_executable(native-ambilight-colors-tests tests/ambilight_colors.cpp)
   target_link_libraries(native-ambilight-colors-tests PRIVATE nativetv_ambilight)
   target_compile_options(native-ambilight-colors-tests PRIVATE -Wall -Wextra -Werror)

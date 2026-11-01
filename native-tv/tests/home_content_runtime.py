@@ -100,6 +100,7 @@ def main():
             # library is still being read at first, then found missing.
             discover = json.loads(body)
             assert discover.pop("jellyfin") in ("loading", "unconfigured"), discover
+            assert isinstance(discover.pop("weather"), dict), discover
             assert discover == {"ok": True, "enabled": False, "rows": []}, discover
 
             status, body = get(

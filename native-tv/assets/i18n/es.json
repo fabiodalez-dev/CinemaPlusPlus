@@ -1593,6 +1593,7 @@
 "sub.server": {"text": "Servidor y copia de seguridad", "from": "Server and backup"},
 "sub.settings.label": {"text": "Secciones de Ajustes", "from": "Settings sections"},
 "sub.tools": {"text": "Herramientas y registros", "from": "Tools and logs"},
+"sub.weather": {"text": "Tiempo", "from": "Weather"},
 "svc.locked": {"text": "Bloqueado", "from": "Locked"},
 "svc.open": {"text": "Abrir", "from": "Open"},
 "svc.open.desc": {"text": "Muestra el menú en la TV, que pide un PIN de cuatro dígitos - normalmente 0413, aunque varía según el modelo y la región. In Start es para diagnósticos del sistema, horas totales de uso (UTT), registros de errores y protecciones OLED (TPC y GSR). EZ Adjust es para configuración de hardware, opciones Tool Option y calibración de balance de blancos.", "from": "Puts the menu on the TV, where it asks for a four-digit PIN — usually 0413, though it varies by model and region. In Start is for system diagnostics, total power-on hours (UTT), error logs, and OLED protections (TPC and GSR). EZ Adjust is for hardware configuration, Tool Options, and white balance calibration."},
@@ -1966,5 +1967,17 @@
 "tv.system.swapFree": {"text": "Swap libre", "from": "Swap free"},
 "tv.system.swapFree.hint": {"text": "Memoria comprimida guardada en RAM en lugar de en disco, así que un uso intenso cuesta velocidad pero no desgasta el almacenamiento.", "from": "Compressed memory held in RAM rather than on disk, so heavy use costs speed but does not wear the storage."},
 "tv.system.temperature.hint": {"text": "El sensor del procesador principal (SoC), no del panel. Sube con la decodificación de vídeo y la carga de CPU.", "from": "The main processor (SoC) sensor, not the panel. It climbs with video decoding and CPU workload."},
-"tv.system.wiFi": {"text": "Wi-Fi", "from": "Wi-Fi"}
+"tv.system.wiFi": {"text": "Wi-Fi", "from": "Wi-Fi"},
+"wx.desc": {"text": "La temperatura actual junto al reloj, de Open-Meteo (sin cuenta), para el lugar elegido aquí.", "from": "The temperature now beside the clock, from Open-Meteo (no account needed), for the place chosen here."},
+"wx.enabled": {"text": "Mostrar el tiempo", "from": "Show the weather"},
+"wx.failed": {"text": "No ha funcionado", "from": "That did not work"},
+"wx.loading": {"text": "Leyendo el pronóstico para {place}…", "from": "Reading the forecast for {place}…"},
+"wx.none": {"text": "Ningún lugar con ese nombre", "from": "No place with that name"},
+"wx.now": {"text": "{place}: {temp}° ahora", "from": "{place}: {temp}° now"},
+"wx.off": {"text": "Desactivado", "from": "Off"},
+"wx.offline": {"text": "Open-Meteo no responde. La TV lo intenta de nuevo en unos minutos.", "from": "Open-Meteo is not answering. The TV tries again in a few minutes."},
+"wx.place": {"text": "Lugar", "from": "Place"},
+"wx.search": {"text": "Buscar", "from": "Search"},
+"wx.title": {"text": "El tiempo en Inicio", "from": "Weather on Home"},
+"wx.units": {"text": "Grados", "from": "Degrees"}
 }

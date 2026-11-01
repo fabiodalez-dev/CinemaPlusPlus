@@ -1903,6 +1903,7 @@
 <button type="button" class="tab" role="tab" id="tab-btn-oledcare" data-tab="oledcare" aria-controls="oledpane" aria-selected="false" tabindex="-1" hidden><span data-t="sub.oled">OLED care</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-screensaver" data-tab="screensaver" aria-controls="sspane" aria-selected="false" tabindex="-1"><span data-t="sub.savers">Screen savers</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-game" data-tab="game" aria-controls="gamepane" aria-selected="false" tabindex="-1" hidden><span data-t="sub.game">Game mode</span></button>
+<button type="button" class="tab" role="tab" id="tab-btn-weather" data-tab="weather" aria-controls="wxpane" aria-selected="false" tabindex="-1"><span data-t="sub.weather">Weather</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-ledstrip" data-tab="ledstrip" aria-controls="ledpane" aria-selected="false" tabindex="-1"><span data-t="sub.ledstrip">LED strip</span></button>
 <span class="tab-ind"></span></div>
       <section class="panel grid" id="oledpane" role="tabpanel" hidden>
@@ -2001,6 +2002,28 @@
 <div class="pv-note" id="ss-note"></div>
 </article>
 </section>
+      <section class="panel grid" id="wxpane" role="tabpanel" hidden>
+        <div class="card" style="--p:2;--t:4;--d:12">
+          <h2 data-t="wx.title">Weather on Home</h2>
+          <p class="sub" data-t="wx.desc">The temperature now beside the clock, from Open-Meteo (no account needed), for the place chosen here.</p>
+          <div class="setting-row">
+            <label for="wx-enabled" data-t="wx.enabled">Show the weather</label>
+            <input type="checkbox" id="wx-enabled" onchange="wxSave({ enabled: this.checked })">
+          </div>
+          <div class="setting-row">
+            <label for="wx-units" data-t="wx.units">Degrees</label>
+            <select id="wx-units" onchange="wxSave({ units: this.value })"><option value="c">°C</option><option value="f">°F</option></select>
+          </div>
+          <div class="setting-row">
+            <label for="wx-query" data-t="wx.place">Place</label>
+            <input type="text" id="wx-query" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn btn-tonal" onclick="wxSearch()" data-t="wx.search">Search</button>
+          </div>
+          <div id="wx-places"></div>
+          <p class="sub" id="wx-status" role="status"></p>
+          <div id="wx-days" class="setting-row" style="flex-wrap:wrap;gap:1em"></div>
+        </div>
+      </section>
       <section class="panel grid" id="ledpane" role="tabpanel" hidden>
         <div class="card" style="--p:2;--t:4;--d:12">
           <h2 data-t="led.title">LED strip behind the TV</h2>
@@ -4210,6 +4233,7 @@
     <script src="/assets/ui/screensavers.js"></script>
     <script src="/assets/ui/ledstrip.js"></script>
     <script src="/assets/ui/jellyfin.js"></script>
+    <script src="/assets/ui/weather.js"></script>
     <script src="/assets/ui/mqtt.js"></script>
     <script src="/assets/ui/tools.js"></script>
     <script src="/assets/ui/tabs.js"></script>

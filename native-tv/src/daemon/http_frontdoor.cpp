@@ -1769,6 +1769,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       // constructor's systemRoot: systemRoot_ is declared further down and not set yet.
       homeJellyfin_(dataRoot_, rootedSystemPath(systemRoot, "/var/lib/launch-home-cinema/jellyfin.json")),
       jellyfinLink_(rootedSystemPath(systemRoot, "/var/lib/launch-home-cinema/jellyfin.json")),
+      homeWeather_(dataRoot_),
       homeImageProxy_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
@@ -10942,6 +10943,72 @@ void HttpFrontDoor::ledStripAction(HttpExchange &exchange, const std::string &ac
     respond(200, response);
 }
 
+// The weather on Home: GET the forecast, GET /search?q= for places, POST
+// {"enabled", "units", "place"} to change it.
+void HttpFrontDoor::handleHomeWeather(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    Json response = Json::object();
+    if (request.method == "GET" && request.uri == "/api/home/weather/search") {
+        std::string query;
+        (void)uniqueQueryParameter(request.query, "q", query);
+        response.set("ok", Json::flag(true));
+        response.set("places", homeWeather_.search(query, currentConfigDocument()["language"].string("en")));
+        respond(200, response);
+        return;
+    }
+    if (request.method == "GET") {
+        response = homeWeather_.feed();
+        response.set("ok", Json::flag(true));
+        respond(200, response);
+        return;
+    }
+    if (request.method != "POST" || request.uri != "/api/home/weather") {
+        response.set("ok", Json::flag(false));
+        response.set("error", Json::text("method not allowed"));
+        respond(405, response);
+        return;
+    }
+    if (!config_.allowControl && !isLoopbackPeer(request.remoteAddress)) {
+        sendSetupError(exchange, 403, say::msg("srv.controlsOff", "controls disabled in config"));
+        return;
+    }
+    if (rejectCrossSitePost(exchange))
+        return;
+    if (!exchange.setBodyLimit(4096)) {
+        sendSetupError(exchange, 413, "request body too large", true);
+        return;
+    }
+    std::string body;
+    char buffer[1024];
+    for (;;) {
+        const int count = exchange.readBody(buffer, sizeof(buffer));
+        if (count == 0)
+            break;
+        if (count < 0) {
+            sendSetupError(exchange, 400, "invalid request body", true);
+            return;
+        }
+        body.append(buffer, static_cast<size_t>(count));
+    }
+    std::string error;
+    if (!homeWeather_.configure(Json::parse(body), error)) {
+        response.set("ok", Json::flag(false));
+        response.set("error", Json::text(error));
+        respond(400, response);
+        return;
+    }
+    response = homeWeather_.feed();
+    response.set("ok", Json::flag(true));
+    respond(200, response);
+}
+
 // Quick Connect with Jellyfin. GET reports the state and, while a code waits,
 // asks the server whether it was approved; POST {"action": "start", "server"},
 // {"action": "cancel"} or {"action": "unlink"}.
@@ -16732,6 +16799,7 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
         result.set("rows", rows);
     }
     result.set("jellyfin", Json::text(jellyfin["state"].string("unconfigured")));
+    result.set("weather", homeWeather_.feed());
     // Search finds titles in the library too, with or without TMDB.
     if (jellyfin["state"].string() == "online")
         result.set("titlesEnabled", Json::flag(true));
@@ -18299,6 +18367,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/jellyfin/image" && request.method == "GET") {
         sendHomeJellyfinImage(exchange);
+        return;
+    }
+    if (request.uri == "/api/home/weather" || request.uri == "/api/home/weather/search") {
+        handleHomeWeather(exchange);
         return;
     }
     if (request.uri == "/api/jellyfin/link") {

@@ -1653,6 +1653,7 @@
 "sub.server": {"text": "Server e backup", "from": "Server and backup"},
 "sub.settings.label": {"text": "Sezioni Impostazioni", "from": "Settings sections"},
 "sub.tools": {"text": "Strumenti e log", "from": "Tools and logs"},
+"sub.weather": {"text": "Meteo", "from": "Weather"},
 "svc.locked": {"text": "Bloccato", "from": "Locked"},
 "svc.open": {"text": "Apri", "from": "Open"},
 "svc.open.desc": {"text": "Apre il menu sulla TV, che chiede un PIN di quattro cifre — di solito 0413, ma varia per modello e area geografica. In Start serve per la diagnostica di sistema, le ore totali di accensione (UTT), i log degli errori e le protezioni OLED (TPC e GSR). EZ Adjust serve per la configurazione hardware, i Tool Options e la calibrazione del bilanciamento del bianco.", "from": "Puts the menu on the TV, where it asks for a four-digit PIN — usually 0413, though it varies by model and region. In Start is for system diagnostics, total power-on hours (UTT), error logs, and OLED protections (TPC and GSR). EZ Adjust is for hardware configuration, Tool Options, and white balance calibration."},
@@ -2204,5 +2205,17 @@
 "tv.system.temperature.hint": {"text": "Il sensore del processore principale (SoC), non del pannello. Sale con la decodifica video e il carico della CPU.", "from": "The main processor (SoC) sensor, not the panel. It climbs with video decoding and CPU workload."},
 "tv.system.wiFi": {"text": "Wi-Fi", "from": "Wi-Fi"},
 "tv.write.failed": {"text": "Non ha funzionato", "from": "That did not work"},
-"tv.write.timeout": {"text": "la TV non ha risposto", "from": "the TV did not answer"}
+"tv.write.timeout": {"text": "la TV non ha risposto", "from": "the TV did not answer"},
+"wx.desc": {"text": "La temperatura di adesso accanto all'orologio, da Open-Meteo (senza account), per il posto scelto qui.", "from": "The temperature now beside the clock, from Open-Meteo (no account needed), for the place chosen here."},
+"wx.enabled": {"text": "Mostra il meteo", "from": "Show the weather"},
+"wx.failed": {"text": "Non ha funzionato", "from": "That did not work"},
+"wx.loading": {"text": "Leggo le previsioni per {place}…", "from": "Reading the forecast for {place}…"},
+"wx.none": {"text": "Nessun posto con quel nome", "from": "No place with that name"},
+"wx.now": {"text": "{place}: {temp}° adesso", "from": "{place}: {temp}° now"},
+"wx.off": {"text": "Spento", "from": "Off"},
+"wx.offline": {"text": "Open-Meteo non risponde. La TV riprova tra qualche minuto.", "from": "Open-Meteo is not answering. The TV tries again in a few minutes."},
+"wx.place": {"text": "Posto", "from": "Place"},
+"wx.search": {"text": "Cerca", "from": "Search"},
+"wx.title": {"text": "Meteo in Home", "from": "Weather on Home"},
+"wx.units": {"text": "Gradi", "from": "Degrees"}
 }
