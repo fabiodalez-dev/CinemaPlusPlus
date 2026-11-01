@@ -153,9 +153,11 @@ add_executable(nativetv-service src/service/main.cpp)
 target_link_libraries(nativetv-service PRIVATE nativetv_metrics)
 target_compile_options(nativetv-service PRIVATE -Wall -Wextra -Werror)
 add_library(nativetv_ambilight STATIC
-  src/ambilight/colors.cpp src/ambilight/controller.cpp)
+  src/ambilight/colors.cpp src/ambilight/controller.cpp src/ambilight/bus.cpp src/ambilight/tv.cpp)
 target_include_directories(nativetv_ambilight PUBLIC src)
 target_link_libraries(nativetv_ambilight PUBLIC nativetv_core Threads::Threads)
+add_executable(nativetv-ambilight src/ambilight/main.cpp)
+target_link_libraries(nativetv-ambilight PRIVATE nativetv_ambilight)
 add_executable(nativetv-daemon src/daemon/main.cpp)
 target_link_libraries(nativetv-daemon PRIVATE nativetv_http_server)
 target_compile_definitions(nativetv-daemon PRIVATE
@@ -164,9 +166,11 @@ target_compile_options(nativetv-daemon PRIVATE -Wall -Wextra -Werror)
 if(NOT APPLE)
   target_link_options(nativetv-service PRIVATE -static-libstdc++ -static-libgcc -Wl,--as-needed)
   target_link_options(nativetv-daemon PRIVATE -static-libstdc++ -static-libgcc -Wl,--as-needed)
+  target_link_options(nativetv-ambilight PRIVATE -static-libstdc++ -static-libgcc -Wl,--as-needed)
 endif()
+target_compile_options(nativetv-ambilight PRIVATE -Wall -Wextra -Werror)
 if(CMAKE_CROSSCOMPILING)
-  set_target_properties(nativetv-service nativetv-daemon PROPERTIES
+  set_target_properties(nativetv-service nativetv-daemon nativetv-ambilight PROPERTIES
     BUILD_RPATH "$ORIGIN"
     BUILD_WITH_INSTALL_RPATH TRUE
     INSTALL_RPATH "$ORIGIN")

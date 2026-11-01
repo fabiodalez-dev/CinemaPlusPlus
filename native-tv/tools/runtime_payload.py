@@ -372,7 +372,7 @@ def stage(build, destination, sysroot=None):
              "remotekeys-filter.js": ((ROOT / "assets/remotekeys-filter.js").read_bytes(),
                                       0o644)}
     pendingLibraries = []
-    for name in ("nativetv-daemon", "nativetv-service"):
+    for name in ("nativetv-daemon", "nativetv-service", "nativetv-ambilight"):
         binary = build / name
         if not binary.is_file():
             raise ValueError("Build nativetv-service and nativetv-daemon first with "
@@ -431,7 +431,8 @@ def archive_runtime(directory, output):
                     info = tarfile.TarInfo("native/" + name)
                     info.size = len(content)
                     info.mode = 0o755 if name in (
-                        "nativetv-daemon", "nativetv-service", "nativetv-tv") else 0o644
+                        "nativetv-daemon", "nativetv-service", "nativetv-ambilight",
+                        "nativetv-tv") else 0o644
                     archive.addfile(info, io.BytesIO(content))
 
 
