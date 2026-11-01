@@ -20,7 +20,7 @@ namespace {
 const char *const kModes[] = {
     "clock", "clock-date", "black", "starfield", "fireworks", "bokeh", "harmonograph",
     "filament", "currents", "veils", "incense", "murmuration", "vortex", "neo",
-    "tesseract", "vitals"
+    "tesseract", "vitals", "cinema"
 };
 
 std::string rooted(const std::string &root, const std::string &path) {
@@ -256,6 +256,47 @@ bool stageFiles(const std::string &systemRoot, const std::string &assetsRoot,
     }
     qml = replaceAll(qml, "__TVWEB_URL__", statsUrl(publicPort, token));
     qml = replaceAll(qml, "__TVWEB_LEVEL__", level == "bright" ? "1" : "0");
+    // Cinema's saver shows the Home wallpapers: copied beside it, the bundled one when
+    // none was uploaded.
+    std::string walls = "[]";
+    if (mode == "cinema") {
+        walls = "[";
+        for (const char *slot : {"morning", "afternoon", "evening", "night"}) {
+            std::string bytes;
+            if (readFile(rooted(systemRoot, "/var/lib/tvweb/home-wallpaper-uploads/") + slot + ".jpg", bytes) &&
+                writeFile(qmlDir + "/wall-" + slot + ".jpg", bytes))
+                walls += std::string(walls.size() > 1 ? "," : "") + "\"wall-" + slot + ".jpg\"";
+        }
+        std::string bundled;
+        if (walls.size() == 1 && readFile(assetsRoot + "/wallpapers/nebula.jpg", bundled) &&
+            writeFile(qmlDir + "/wall-bundled.jpg", bundled))
+            walls += "\"wall-bundled.jpg\"";
+        walls += "]";
+    }
+    qml = replaceAll(qml, "__TVWEB_WALLS__", walls);
+    // Day and month names in the TV's language (config.json "language"), from the TV app's
+    // own words; English without them.
+    {
+        std::string config, dictionary;
+        std::string language = "en";
+        if (readFile(rooted(systemRoot, "/var/lib/tvweb/config.json"), config)) {
+            const std::string code = Json::parse(config)["language"].string();
+            if (code.size() == 2) language = code;
+        }
+        Json words;
+        if (language != "en" && readFile(assetsRoot + "/i18n/" + language + ".json", dictionary))
+            words = Json::parse(dictionary);
+        static const char *days[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+        static const char *months[] = {"January", "February", "March", "April", "May", "June", "July",
+                                       "August", "September", "October", "November", "December"};
+        Json dayNames = Json::array(), monthNames = Json::array();
+        for (int i = 0; i < 7; ++i)
+            dayNames.add(Json::text(words["tv.date.day" + std::to_string(i)]["text"].string(days[i])));
+        for (int i = 0; i < 12; ++i)
+            monthNames.add(Json::text(words["tv.date.month" + std::to_string(i + 1)]["text"].string(months[i])));
+        qml = replaceAll(qml, "__TVWEB_DAYS__", dayNames.dump());
+        qml = replaceAll(qml, "__TVWEB_MONTHS__", monthNames.dump());
+    }
     if (!writeFile(qmlDir + "/main.qml", qml) ||
         !copyAssets(assetsRoot + "/screensavers", qmlDir)) {
         error = "could not stage screen saver assets";

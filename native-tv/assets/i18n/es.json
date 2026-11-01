@@ -1467,6 +1467,8 @@
 "srv.saver.black.desc": {"text": "Nada en pantalla. En un OLED, los píxeles están apagados.", "from": "Nothing on screen. On an OLED the pixels are off."},
 "srv.saver.bokeh": {"text": "Bokeh", "from": "Bokeh"},
 "srv.saver.bokeh.desc": {"text": "Círculos suaves de luz que aparecen y se desvanecen sobre negro.", "from": "Soft circles of light drifting in and out on black."},
+"srv.saver.cinema": {"text": "Cinema", "from": "Cinema"},
+"srv.saver.cinema.desc": {"text": "Los fondos de Inicio fundiéndose uno en otro, con la hora y la fecha.", "from": "The Home wallpapers fading one into the next, with the time and the date."},
 "srv.saver.clock": {"text": "Reloj", "from": "Clock"},
 "srv.saver.clock.desc": {"text": "Un reloj digital sobre negro, que cambia de posición cada minuto.", "from": "A digital clock on black, moving to a new position every minute."},
 "srv.saver.clockDate": {"text": "Reloj y fecha", "from": "Clock with date"},

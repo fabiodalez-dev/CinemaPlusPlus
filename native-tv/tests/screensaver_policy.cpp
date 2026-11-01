@@ -73,7 +73,7 @@ int main() {
         check(list["writable"].boolean(), "writable follows allowControl");
         check(list["external"]["active"].boolean() && !list["external"]["hook"].boolean(),
               "external detection");
-        check(list["modes"].size() == 17, "seventeen entries in dashboard order");
+        check(list["modes"].size() == 18, "eighteen entries in dashboard order");
         check(list["modes"][0]["id"].string() == "stock", "stock first");
         marked.markerMode = "bogus";
         marked.markerLevel = "x";

@@ -49,6 +49,8 @@ const Saver kSavers[] = {
      "A four-dimensional cube turning through the fourth dimension, in fine lines of light."},
     {"vitals", "srv.saver.vitals", "Panel vitals", "srv.saver.vitals.desc",
      "The TV's own readings - panel hours, pixel refresher countdown, temperature."},
+    {"cinema", "srv.saver.cinema", "Cinema", "srv.saver.cinema.desc",
+     "The Home wallpapers fading one into the next, with the time and the date."},
 };
 
 bool knownSaver(const std::string &id) {

@@ -9540,7 +9540,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                                  ["stock", "clock", "clock-date", "black", "starfield",
                                   "fireworks", "bokeh", "harmonograph", "filament",
                                   "currents", "veils", "incense", "murmuration", "vortex",
-                                  "neo", "tesseract", "vitals"])
+                                  "neo", "tesseract", "vitals", "cinema"])
                 available = {m["id"]: m["available"] for m in held["modes"]}
                 self.assertEqual([k for k, v in available.items() if v], ["stock"])
 
