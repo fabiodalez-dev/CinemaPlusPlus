@@ -159,6 +159,17 @@ const DashboardRow kDashboardRows[] = {
     {"livePromotion", "promotions", "option", "livePromotion", Kind::Switch, 0, 0,
      "srv.lgs.livePromotion", "Ads while watching", "srv.lgs.livePromotion.desc",
      "Adverts and offers shown over what is on screen, while LG's Live Plus is on. LG calls this Live Promotion."},
+    // From Cinema's settingsOff: the advertising ID, LG's sports alerts and
+    // LG Channels, verified on a 43UN70006LA with webOS 5.6.
+    {"adCookie", "promotions", "general", "adCookie", Kind::Switch, 0, 0,
+     "srv.lgs.adCookie", "Advertising ID", "srv.lgs.adCookie.desc",
+     "The identifier LG gives the TV so that adverts can follow what it watches. LG calls this Do Not Track off."},
+    {"sportsAlarm", "promotions", "general", "sportsAlarm", Kind::Switch, 0, 0,
+     "srv.lgs.sportsAlarm", "Sports alerts", "srv.lgs.sportsAlarm.desc",
+     "Pop-ups with the scores and start times of the teams followed in LG's Sports Alert."},
+    {"channelplus", "promotions", "option", "channelplus", Kind::Switch, 0, 0,
+     "srv.lgs.channelplus", "LG Channels", "srv.lgs.channelplus.desc",
+     "LG's free internet channels mixed into the channel list."},
     {"aiNudge", "promotions", "general", "aiNudge", Kind::Switch, 0, 0,
      "srv.lgs.aiNudge", "Smart tips", "srv.lgs.aiNudge.desc",
      "Suggestions for TV features that pop up while watching or using an app. LG calls this Smart Tips."},

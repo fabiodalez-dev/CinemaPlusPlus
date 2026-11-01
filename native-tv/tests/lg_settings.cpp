@@ -56,7 +56,8 @@ int main() {
         assert((categories == std::vector<std::string>{"general", "other", "option"}));
         const Json r = response({"promotions"},
             R"({"general":{"homePromotion":"on","adCookie":"on"},"other":{},"option":{"livePromotion":"off"}})");
-        assert((ids(r) == std::vector<std::string>{"homePromotion", "livePromotion"}));
+        assert((ids(r) == std::vector<std::string>{"homePromotion", "livePromotion", "adCookie"}));
+        assert(row(r, "adCookie")["on"].boolean());
         assert(row(r, "homePromotion")["on"].boolean());
         assert(!row(r, "livePromotion")["on"].boolean());
     }
