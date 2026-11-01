@@ -144,7 +144,7 @@ add_library(nativetv_tv_services src/service/control_commands.cpp
   src/service/home_recent_history.cpp
   src/service/home_picture.cpp src/service/home_now.cpp
   src/service/home_open.cpp
-  src/service/home_content.cpp src/service/home_discover.cpp
+  src/service/home_content.cpp src/service/home_discover.cpp src/service/home_jellyfin.cpp
   src/service/home_image_proxy.cpp)
 target_link_libraries(nativetv_tv_services PUBLIC nativetv_core nativetv_names
   PkgConfig::CURL ZLIB::ZLIB)
@@ -772,6 +772,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-memory-keep-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-memory-keep-tests PRIVATE -Wall -Wextra -Werror)
   add_test(NAME native-memory-keep COMMAND native-memory-keep-tests)
+  add_executable(native-home-jellyfin-tests tests/home_jellyfin.cpp)
+  target_link_libraries(native-home-jellyfin-tests PRIVATE nativetv_tv_services)
+  target_compile_options(native-home-jellyfin-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-home-jellyfin COMMAND native-home-jellyfin-tests)
   add_executable(native-ambilight-colors-tests tests/ambilight_colors.cpp)
   target_link_libraries(native-ambilight-colors-tests PRIVATE nativetv_ambilight)
   target_compile_options(native-ambilight-colors-tests PRIVATE -Wall -Wextra -Werror)

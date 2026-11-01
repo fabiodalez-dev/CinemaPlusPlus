@@ -1764,6 +1764,9 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       adminPin_(dataFilePath(dataRoot_, "admin-pin.json")),
       homeContent_(dataRoot_),
       homeDiscover_(dataRoot_),
+      // Cinema's connection, written by its Quick Connect: root-only, read in place. The
+      // constructor's systemRoot: systemRoot_ is declared further down and not set yet.
+      homeJellyfin_(dataRoot_, rootedSystemPath(systemRoot, "/var/lib/launch-home-cinema/jellyfin.json")),
       homeImageProxy_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
@@ -16606,8 +16609,19 @@ void HttpFrontDoor::sendHomeContent(HttpExchange &exchange,
 
 void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
     const Json document = currentConfigDocument();
-    const Json result = homeDiscover_.feed(document["tmdbKey"].string(),
-                                           document["youtubeKey"].string());
+    Json result = homeDiscover_.feed(document["tmdbKey"].string(),
+                                     document["youtubeKey"].string());
+    // The library on the Jellyfin server, ahead of the TMDB rows, as Cinema shows it.
+    const Json jellyfin = homeJellyfin_.feed();
+    if (jellyfin["rows"].isArray() && jellyfin["rows"].size()) {
+        Json rows = Json::array();
+        for (const Json &row : jellyfin["rows"].items()) rows.add(row);
+        if (result["rows"].isArray())
+            for (const Json &row : result["rows"].items()) rows.add(row);
+        result.set("rows", rows);
+    }
+    result.set("jellyfin", Json::text(jellyfin["state"].string("unconfigured")));
+    if (jellyfin["user"].isString()) result.set("jellyfinUser", jellyfin["user"]);
     if (result["enabled"].boolean() && result["rows"].isArray() &&
         result["rows"].size())
         homeImageProxy_.retainAndWarm(result["rows"]);
@@ -16616,6 +16630,20 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
                             {"Cache-Control", "no-store"},
                             {"X-Content-Type-Options", "nosniff"}},
                            result.dump());
+}
+
+void HttpFrontDoor::sendHomeJellyfinImage(HttpExchange &exchange) const {
+    std::string spec, bytes;
+    if (!uniqueQueryParameter(exchange.request().query, "spec", spec) || !homeJellyfin_.image(spec, bytes)) {
+        (void)exchange.respond(404, {{"Content-Type", "application/json; charset=utf-8"}},
+                               "{\"ok\":false,\"error\":\"no picture\"}");
+        return;
+    }
+    (void)exchange.respond(200,
+                           {{"Content-Type", "image/jpeg"},
+                            {"Cache-Control", "private, max-age=86400"},
+                            {"X-Content-Type-Options", "nosniff"}},
+                           bytes);
 }
 
 void HttpFrontDoor::sendHomeImage(HttpExchange &exchange) const {
@@ -17514,7 +17542,7 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     Json apps;
     Json devices;
     Json channels;
-    if (kind == "app" || kind == "youtube" || kind == "netflix") {
+    if (kind == "app" || kind == "youtube" || kind == "netflix" || kind == "jellyfin") {
         apps = homeCatalogueAppsSnapshot();
     } else if (kind == "dev") {
         devices = homeCatalogueDevicesSnapshot();
@@ -17524,7 +17552,8 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     }
 
     const service::HomeOpenPlan plan =
-        service::planHomeOpen(kind, id, apps, devices, channels);
+        service::planHomeOpen(kind, id, apps, devices, channels,
+                              payload["action"].isString() ? payload["action"].string() : "");
     if (!plan.handled) {
         (void)proxy_.forwardBufferedBody(exchange, body);
         return;
@@ -18152,6 +18181,17 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
             return;
         }
         handleHomeWallpapersRemove(exchange);
+        return;
+    }
+    if (request.uri == "/api/home/jellyfin/image" && request.method == "GET") {
+        sendHomeJellyfinImage(exchange);
+        return;
+    }
+    if (request.uri == "/api/home/jellyfin/refresh" && request.method == "POST") {
+        if (rejectCrossSitePost(exchange))
+            return;
+        homeJellyfin_.refreshNow();
+        (void)exchange.respond(200, {{"Content-Type", "application/json"}}, "{\"ok\":true}");
         return;
     }
     if (request.uri == "/api/home/wallpapers/upload" &&

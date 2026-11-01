@@ -22,6 +22,10 @@ std::string legacyAssetRoute(const std::string &asset) {
                encode("https://image.tmdb.org/t/p/" + size + asset.substr(split + 1)) +
                (size == "w1280" ? "&priority=hero" : "");
     }
+    // Artwork from the Jellyfin server, through the daemon that holds the token:
+    // "jellyfin:<itemId>:<Type>:<width>".
+    if (asset.compare(0, 9, "jellyfin:") == 0)
+        return "/api/home/jellyfin/image?spec=" + encode(asset.substr(9));
     if (asset.compare(0, 7, "recent:") == 0) {
         size_t split = asset.find(':', 7);
         if (split == std::string::npos)

@@ -259,6 +259,49 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     CardRow apps = appsRow(catalogue, guide, false);
     if (!apps.cards.empty())
         result.push_back(apps);
+    // The Jellyfin library first, as on Cinema: Continue watching leads.
+    const std::map<std::string, std::string> library = {
+        {"jf-continue", say::msg("tv.home.row.jfContinue", "Continue watching")},
+        {"jf-recent", say::msg("tv.home.row.jfRecent", "Recently added")},
+        {"jf-movies", say::msg("tv.home.row.jfMovies", "Your films")},
+        {"jf-series", say::msg("tv.home.row.jfSeries", "Your series")},
+        {"jf-music", say::msg("tv.home.row.jfMusic", "Your music")}};
+    for (const auto &key : {"jf-continue", "jf-recent", "jf-movies", "jf-series", "jf-music"}) {
+        if (!feedRows.count(key))
+            continue;
+        const Json source = feedRows[key];
+        CardRow row;
+        row.key = key;
+        row.title = library.at(key);
+        for (const auto &item : source["items"].items()) {
+            Card card;
+            card.id = item["id"].string();
+            card.kind = "jellyfin";
+            card.data = item;
+            card.title = item["title"].string();
+            if (item["remaining"].isNumber()) {
+                Json vars = Json::object();
+                vars.set("n", Json::text(std::to_string(int(item["remaining"].number()))));
+                card.subtitle = say::msg("tv.home.jf.remaining", "{n} min left", vars);
+            } else if (item["episode"].isString()) {
+                card.subtitle = (item["season"].isNumber() ? "S" + std::to_string(int(item["season"].number())) + " · " : std::string()) +
+                                (item["number"].isNumber() ? "E" + std::to_string(int(item["number"].number())) + " · " : std::string()) +
+                                item["episode"].string();
+            } else {
+                std::string facts = item["year"].isNumber() ? std::to_string(int(item["year"].number())) : "";
+                if (item["genres"].size()) facts += (facts.empty() ? "" : " · ") + item["genres"][0].string();
+                card.subtitle = facts;
+            }
+            if (item["image"].isString()) card.image = "jellyfin:" + item["image"].string() + ":640";
+            if (item["backdrop"].isString()) card.backdrop = "jellyfin:" + item["backdrop"].string() + ":1280";
+            card.command = post(Operation::OpenHomeItem,
+                                fields({{"kind", Json::text("jellyfin")}, {"id", item["id"]},
+                                        {"action", Json::text(item["progress"].number() > 0 ? "resume" : "details")}}));
+            row.cards.push_back(card);
+        }
+        if (!row.cards.empty())
+            result.push_back(row);
+    }
     for (const auto &key : {"trending", "movies", "series", "netflix", "youtube"}) {
         if (!feedRows.count(key))
             continue;

@@ -29,7 +29,8 @@ bool due(uint32_t now, uint32_t at) {
     return static_cast<int32_t>(now - at) >= 0;
 }
 bool isTitle(const Card &card) {
-    return card.kind == "title" || card.kind == "youtube" || card.kind == "netflix";
+    return card.kind == "title" || card.kind == "youtube" || card.kind == "netflix" ||
+           card.kind == "jellyfin";
 }
 std::string artOf(const Card &card) {
     return isTitle(card) ? (card.backdrop.empty() ? card.image : card.backdrop) : "";
@@ -60,8 +61,12 @@ size_t rowIndex(const std::vector<CardRow> &rows, const char *key) {
 size_t defaultRow(const HomeState &home) {
     if (home.tabs.empty() || home.tabs[home.tab].key != "home")
         return 0;
-    size_t trending = rowIndex(home.rows, "trending");
-    return trending < home.rows.size() ? trending : 0;
+    for (const char *key : {"jf-continue", "jf-recent", "trending"}) {
+        const size_t at = rowIndex(home.rows, key);
+        if (at < home.rows.size())
+            return at;
+    }
+    return 0;
 }
 // The row that names the card in the hero: the focused one when it holds the card (a title can
 // sit in two rows), otherwise the first that does.

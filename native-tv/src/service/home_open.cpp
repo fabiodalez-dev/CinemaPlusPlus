@@ -53,7 +53,7 @@ bool homeOpenHandledKind(const std::string &kind, const std::string &id) {
 
 HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
                           const Json &apps, const Json &devices,
-                          const Json &channels) {
+                          const Json &channels, const std::string &action) {
     HomeOpenPlan plan;
     plan.handled = homeOpenHandledKind(kind, id);
     if (!plan.handled) return plan;
@@ -86,6 +86,26 @@ HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
         plan.channelId = id;
         plan.row = "ch";
         plan.rowId = id;
+        return plan;
+    }
+    if (kind == "jellyfin") {
+        // As Cinema: LiteFin opens the title itself (its adapter reads these
+        // parameters), the other clients open on their library.
+        bool hex = id.size() == 32;
+        for (char c : id) hex = hex && std::isxdigit(static_cast<unsigned char>(c));
+        if (!hex) return plan;
+        for (const char *client : {"org.litefin.app", "org.moonfin.webos", "org.jellyfin.webos",
+                                   "com.breezyfin.app", "com.ocenfin.app"}) {
+            if (!findListed(apps, client).valid()) continue;
+            setLaunch(plan, client);
+            if (std::string(client) == "org.litefin.app") {
+                plan.launchParams = Json::object();
+                plan.launchParams.set("cinemaItemId", Json::text(id));
+                plan.launchParams.set("cinemaAction", Json::text(action == "resume" ? "resume" : "details"));
+            }
+            return plan;
+        }
+        plan.error = say::msg("srv.home.noJellyfin", "No Jellyfin app is installed on this TV");
         return plan;
     }
     if (kind == "youtube") {

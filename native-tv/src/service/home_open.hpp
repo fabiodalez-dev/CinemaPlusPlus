@@ -30,7 +30,7 @@ bool homeOpenHandledKind(const std::string &kind, const std::string &id);
 // Those two are the only deep links; a title is never opened in another app.
 HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
                           const Json &apps, const Json &devices,
-                          const Json &channels);
+                          const Json &channels, const std::string &action = "");
 
 // Complete the external Wikidata lookup before launching Netflix. The native
 // HomeContent service returns the same P1874 link data as the public endpoint.
