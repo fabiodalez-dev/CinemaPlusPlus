@@ -17,6 +17,7 @@ const TABS = {
   screensaver: 'sspane',
   game:        'gamepane',
   ledstrip:    'ledpane',
+  jellyfin:    'jfpane',
   privacy:     'privpane',
   mqtt:        'mqttpane',
   server:      'serverpane',
@@ -27,7 +28,7 @@ const TABS = {
 // The section each tab sits in, and the part of the Apps panel a tab shows.
 const SECTION_OF = {
   control: 'overview', metrics: 'overview',
-  apps: 'apps', catalogue: 'apps', homescreen: 'apps', home: 'apps',
+  apps: 'apps', catalogue: 'apps', homescreen: 'apps', home: 'apps', jellyfin: 'apps',
   oledcare: 'display', screensaver: 'display', game: 'display', ledstrip: 'display',
   privacy: 'privacy',
   mqtt: 'settings', server: 'settings', tools: 'settings', advanced: 'settings', servicemenu: 'settings'
@@ -137,6 +138,7 @@ function showTab(name) {
   if (name === 'servicemenu') loadServiceMenu();
   if (name === 'screensaver') loadScreensavers();
   if (name === 'ledstrip') loadLedStrip();
+  jfPolling(name === 'jellyfin');
   if (name === 'privacy') loadPrivacy();
   if (name === 'mqtt') loadSettings();
   // Opened at the newest line, wherever it was left scrolled.

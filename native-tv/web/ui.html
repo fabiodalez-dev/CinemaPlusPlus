@@ -789,6 +789,7 @@
 <button type="button" class="tab" role="tab" id="tab-btn-apps" data-tab="apps" aria-controls="appspane" aria-selected="false" tabindex="-1"><span data-t="sub.installed">Installed</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-catalogue" data-tab="catalogue" aria-controls="appspane" aria-selected="false" tabindex="-1"><span data-t="sub.catalogue">Catalogue</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-homescreen" data-tab="homescreen" aria-controls="appspane" aria-selected="false" tabindex="-1"><span data-t="sub.homeScreen">LG launcher</span></button>
+<button type="button" class="tab" role="tab" id="tab-btn-jellyfin" data-tab="jellyfin" aria-controls="jfpane" aria-selected="false" tabindex="-1"><span data-t="sub.jellyfin">Jellyfin</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-home" data-tab="home" aria-controls="homepane" aria-selected="false" tabindex="-1" hidden><span data-t="sub.nativeTvHome">Native Tv Home</span></button>
 <span class="tab-ind"></span></div>
       <section class="panel grid" id="appspane" role="tabpanel" hidden>
@@ -1445,6 +1446,28 @@
           </details>
 </div>
 </section>
+      <section class="panel grid" id="jfpane" role="tabpanel" hidden>
+        <div class="card" style="--p:2;--t:4;--d:12">
+          <h2 data-t="jf.title">Jellyfin library</h2>
+          <p class="sub" data-t="jf.desc">Home shows Continue watching, Recently added, your films, series and music from a Jellyfin server, and search finds them. Link the server with Quick Connect: no password is typed here.</p>
+          <p class="sub" id="jf-status" role="status"></p>
+          <div class="setting-row" id="jf-server-row">
+            <label for="jf-server" data-t="jf.server">Server address</label>
+            <input type="text" id="jf-server" placeholder="192.168.1.10:8096" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn btn-filled" id="btn-jf-start" onclick="jfStart()" data-t="jf.start">Get a code</button>
+          </div>
+          <div id="jf-code-box" hidden>
+            <p class="sub" data-t="jf.codeHelp">In a Jellyfin app signed in to this server open Settings, then Quick Connect, and enter this code:</p>
+            <p class="num" id="jf-code" style="font-size:2.4em;letter-spacing:.2em"></p>
+            <button type="button" class="btn btn-tonal" onclick="jfAction('cancel')" data-t="common.cancel">Cancel</button>
+          </div>
+          <div class="setting-row" id="jf-linked-row" hidden>
+            <button type="button" class="btn btn-tonal" onclick="jfRefresh()" data-t="jf.refresh">Refresh Home now</button>
+            <button type="button" class="btn btn-tonal" onclick="jfAction('unlink')" data-t="jf.unlink">Unlink</button>
+          </div>
+          <p class="sub" id="jf-msg" role="status"></p>
+        </div>
+      </section>
       <section class="panel grid" id="homepane" role="tabpanel" hidden>
 <div class="pv-note warn" data-t="home.experimental">
           Experimental. Native Tv Home replaces LG's Home screen with
@@ -4186,6 +4209,7 @@
     <script src="/assets/ui/oled.js"></script>
     <script src="/assets/ui/screensavers.js"></script>
     <script src="/assets/ui/ledstrip.js"></script>
+    <script src="/assets/ui/jellyfin.js"></script>
     <script src="/assets/ui/mqtt.js"></script>
     <script src="/assets/ui/tools.js"></script>
     <script src="/assets/ui/tabs.js"></script>
