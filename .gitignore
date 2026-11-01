@@ -1,0 +1,19 @@
+.DS_Store
+*.log
+.log/
+__pycache__/
+node_modules/
+dist/
+site/
+build*/
+out/
+# Frame captures; the raster tests' reference images are tracked.
+*.ppm
+!native-tv/tests/fixtures/raster/*.ppm
+# Local settings for a TV deployed to from this checkout.
+native-tv/lifecycle/config*.json
+# Editor and agent settings.
+.vscode/
+.idea/
+.serena/
+.direnv/

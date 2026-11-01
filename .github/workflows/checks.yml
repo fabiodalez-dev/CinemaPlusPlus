@@ -1,0 +1,81 @@
+# Offline checks that need nothing but the repository.
+name: Checks
+
+# Branch pushes run through their PR, so a push to one runs once rather than
+# once per event. A branch without a PR can be run by hand.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    name: Checks
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: dashboard reaches for no missing element
+        run: ./scripts/check-ui-ids.py
+
+      # webOS 4's browser runs the TV pages.
+      - name: the TV pages are ES5
+        run: ./scripts/check-es5.py
+
+      - name: strings keyed and translations current
+        run: ./scripts/check-strings.py
+
+      - name: screen saver QML matches its declared QtQuick version
+        run: ./scripts/check-screensavers.py
+
+      - name: documented entity list and deploy list match the code
+        run: ./scripts/check-drift.py
+
+      # An entity that goes or is renamed breaks the automations that used it.
+      - name: no Home Assistant entity from the last release gone without a reason
+        run: ./scripts/check-entity-stability.py
+
+      # Preinstalled on ubuntu-latest.
+      - name: shell scripts
+        run: shellcheck native-tv/lifecycle/deploy.sh native-tv/lifecycle/tvwebctl native-tv/lifecycle/50-tvweb.sh hbc/install.sh scripts/tvstats.sh
+
+      - name: entity templates resolve against fixture
+        run: ./scripts/check-entities.py --stats native-tv/tests/fixtures/tv/stats-b8-webos4.json
+
+      # An install of the last Node release is cleaned at the first start.
+      - name: every file the last Node release installed is shipped or retired
+        run: ./scripts/check-retired-files.py
+
+  # Its own job, so it builds alongside the rest. On an Arm runner: the SDK that
+  # cross-compiles the TV's runtime has no x86_64 Linux build.
+  package:
+    runs-on: ubuntu-24.04-arm
+    name: Package build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/package-ipk
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ipk
+          path: dist/*.ipk
+
+  # The Homebrew Channel's own compatibility check, as its listing runs it:
+  # it reads every .js file in the package as code for the TV's browser. Its
+  # toolbox is an amd64 package, so it checks the Arm job's package here.
+  package-check:
+    runs-on: ubuntu-latest
+    name: Homebrew Channel compatibility check
+    needs: package
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ipk
+          path: dist
+      - name: Homebrew Channel compatibility check
+        run: |
+          gh release download -R webosbrew/dev-toolbox-cli -p 'webosbrew-toolbox-*_amd64.deb' -D /tmp/toolbox
+          sudo apt-get install -y /tmp/toolbox/*.deb
+          webosbrew-ipk-verify --format markdown --details --fw-releases '>=4.0' dist/*.ipk
+        env:
+          GH_TOKEN: ${{ github.token }}

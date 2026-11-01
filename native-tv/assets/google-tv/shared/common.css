@@ -1,0 +1,239 @@
+/* Shared TV styles. data-sections on each page selects only the blocks it uses.
+ * Keep each reusable rule here; page-specific rules belong beside its HTML. */
+/* @section tokens */
+/*
+ * Native Tv's TV design system, after Google's TV Design Kit (Material "TV
+ * Compose", Figma file uB6lquieLC37hjDX0hEo1o). Shared by the pages the TV's
+ * own browser shows; the server inlines these files into each page.
+ *
+ * The TV's browser is Chromium 38 on webOS 3.x: no custom properties, grid,
+ * gap, min()/max() or inset (scripts/check-es5.py). So the tokens below are a
+ * table, and the files use the literal values.
+ *
+ * Size: 1rem is 1% of the screen's height. The kit is drawn at 540dp tall, so
+ * 1dp is 1/5.4rem: 4dp .74rem, 8dp 1.48rem, 12dp 2.22rem, 16dp 2.96rem,
+ * 24dp 4.44rem, 32dp 5.93rem, 40dp 7.41rem, 48dp 8.89rem, 64dp 11.85rem.
+ * The base section sets html to 1vh; a page drawn on a fixed 1920x1080 stage sets
+ * html{font-size:10.8px} instead, and the stage's scaling does the rest.
+ *
+ * Colour, dark theme (the default)            light theme (body.light)
+ *   background            #000 (OLED: off)      #F5F5F5
+ *   surface-container     #1E1F20               #F0F4F9
+ *   surface-container-hi  #282A2C               #E9EEF6
+ *   surface-container-top #333537               #DDE3EA
+ *   surface-variant       #444746               #E1E3E1
+ *   on-surface            #E3E3E3               #1F1F1F
+ *   on-surface-variant    #C4C7C5               #444746
+ *   outline               #8E918F               #747775
+ *   outline-variant       #444746               #C4C7C5
+ *   inverse-surface       #E3E3E3  (focused)    #303030
+ *   inverse-on-surface    #303030               #F2F2F2
+ *   focused list text     #131314               #FFFFFF
+ *   primary               #A8C7FA               #0B57D0
+ *   primary-container     #0842A0               #D3E3FD
+ *   inverse-primary       #0B57D0               #A8C7FA
+ *   secondary             #7FCFFF               #00639B
+ *   secondary-container   #004A77 (at .4)       #C2E7FF
+ *   on-secondary-cont.    #C2E7FF               #001D35
+ *   tertiary (good)       #6DD58C               #146C2E
+ *   error (bad)           #F2B8B5               #B3261E
+ *   warning (not in kit)  #FFB74D               #B45309
+ *
+ * State, on every component: .focus is focused (light fill, scaled up),
+ * .on is selected (secondary-container tint), .dim is disabled (40%).
+ *
+ * Motion: .2s cubic-bezier(.2,0,0,1) for occasional actions; repeated list
+ * focus uses .12s transforms with immediate text and fill changes. Large
+ * elements animate only transform and opacity to avoid per-frame repainting.
+ *
+ * Elevation, dark: 1 = 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+ * 2 = 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15);
+ * 3 = 0 1px 3px rgba(0,0,0,.3), 0 4px 8px 3px rgba(0,0,0,.15).
+ */
+
+/* The type scale, at 2x the kit's sp for 1080 lines. */
+.gt-display-l{font-size:10.56rem;line-height:11.85rem;font-weight:400;letter-spacing:-.004em}
+.gt-display-m{font-size:8.33rem;line-height:9.63rem;font-weight:400}
+.gt-display-s{font-size:6.67rem;line-height:8.15rem;font-weight:400}
+.gt-headline-l{font-size:5.93rem;line-height:7.41rem;font-weight:400}
+.gt-headline-m{font-size:5.19rem;line-height:6.67rem;font-weight:400}
+.gt-headline-s{font-size:4.44rem;line-height:5.93rem;font-weight:400}
+.gt-title-l{font-size:4.07rem;line-height:5.19rem;font-weight:400}
+.gt-title-m{font-size:2.96rem;line-height:4.44rem;font-weight:500;letter-spacing:.009em}
+.gt-title-s{font-size:2.59rem;line-height:3.7rem;font-weight:500;letter-spacing:.007em}
+.gt-body-l{font-size:2.96rem;line-height:4.44rem;font-weight:400;letter-spacing:.016em}
+.gt-body-m{font-size:2.59rem;line-height:3.7rem;font-weight:400;letter-spacing:.018em}
+.gt-body-s{font-size:2.22rem;line-height:2.96rem;font-weight:400;letter-spacing:.017em}
+.gt-label-l{font-size:2.59rem;line-height:3.7rem;font-weight:500;letter-spacing:.007em}
+.gt-label-m{font-size:2.22rem;line-height:2.96rem;font-weight:500;letter-spacing:.021em}
+.gt-label-s{font-size:2.04rem;line-height:2.96rem;font-weight:500;letter-spacing:.009em}
+
+.gt-muted{color:#C4C7C5}
+.gt-good{color:#6DD58C}
+.gt-bad{color:#F2B8B5}
+.gt-warn{color:#FFB74D}
+.light .gt-muted{color:#444746}
+.light .gt-good{color:#146C2E}
+.light .gt-bad{color:#B3261E}
+.light .gt-warn{color:#B45309}
+
+/* @section fonts */
+/* Roboto, the kit's face, cut to Latin (Spanish included). WOFF rather than
+   WOFF2: every TV browser reads it, and at this subset it is the smaller. */
+@font-face{font-family:'Roboto';src:url('/assets/fonts/Roboto-Regular.woff') format('woff');font-weight:400;font-display:swap}
+@font-face{font-family:'Roboto';src:url('/assets/fonts/Roboto-Medium.woff') format('woff');font-weight:500;font-display:swap}
+
+/* @section reset */
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* @section base */
+html{font-size:1vh}
+html,body{background:#000}
+body{font-family:'Roboto',sans-serif;font-size:2.96rem;line-height:1.5;color:#E3E3E3;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+body.light,html.light{background:#F5F5F5;color:#1F1F1F}
+/* Kept in the shared base so page transitions and components both obey it.
+   Older TV browsers ignore the unsupported media query. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{-webkit-transition:none!important;transition:none!important;
+    -webkit-animation:none!important;animation:none!important}
+}
+
+/* @section button */
+/* Buttons: filled, outline, icon and long (a title with a subtitle). 40dp
+   tall, a pill; focus fills them light and grows them 10%. */
+.gt-btn,.gt-icon-btn,.gt-long{display:inline-block;position:relative;border:0;font-family:inherit;cursor:pointer;
+  -webkit-transition:-webkit-transform .2s cubic-bezier(.2,0,0,1),background-color .2s,color .2s;
+  transition:transform .2s cubic-bezier(.2,0,0,1),background-color .2s,color .2s}
+.gt-btn{height:7.41rem;line-height:7.41rem;padding:0 2.96rem;border-radius:7.41rem;white-space:nowrap;
+  font-size:2.59rem;font-weight:500;letter-spacing:.007em;text-align:center;
+  background:rgba(68,71,70,.8);color:rgba(227,227,227,.8)}
+.gt-btn .gt-ic{display:inline-block;width:3.33rem;height:3.33rem;margin:0 1.11rem 0 -.74rem;vertical-align:-.7rem}
+.gt-btn.outline{background:transparent;box-shadow:inset 0 0 0 .28rem rgba(196,199,197,.4)}
+.gt-icon-btn{width:7.41rem;height:7.41rem;border-radius:50%;text-align:center;line-height:7.41rem;font-size:3.33rem;
+  background:rgba(68,71,70,.8);color:rgba(227,227,227,.8)}
+.gt-icon-btn.outline{background:transparent;box-shadow:inset 0 0 0 .28rem rgba(196,199,197,.4)}
+.gt-long{display:block;min-height:7.41rem;padding:1.48rem 2.96rem;border-radius:1.48rem;text-align:left;
+  background:rgba(68,71,70,.8);color:#E3E3E3}
+.gt-long .gt-long-title{display:block;font-size:2.96rem;line-height:4.44rem;font-weight:500;letter-spacing:.009em}
+.gt-long .gt-long-sub{display:block;font-size:2.22rem;line-height:2.96rem;opacity:.8}
+
+.gt-btn.focus,.gt-icon-btn.focus{background:#E3E3E3;color:#303030;-webkit-transform:scale(1.1);transform:scale(1.1)}
+.gt-btn.outline.focus,.gt-icon-btn.outline.focus{box-shadow:inset 0 0 0 .3rem #8E918F}
+.gt-long.focus{background:#E3E3E3;color:#303030;-webkit-transform:scale(1.05);transform:scale(1.05)}
+.gt-btn.dim,.gt-icon-btn.dim,.gt-long.dim{background:rgba(68,71,70,.4);color:rgba(227,227,227,.4)}
+.gt-btn.outline.dim,.gt-icon-btn.outline.dim{background:transparent;box-shadow:inset 0 0 0 .28rem rgba(196,199,197,.2)}
+
+.light .gt-btn,.light .gt-icon-btn,.light .gt-long{background:rgba(225,227,225,.9);color:#1F1F1F}
+.light .gt-btn.outline,.light .gt-icon-btn.outline{background:transparent;box-shadow:inset 0 0 0 .28rem #747775}
+.light .gt-btn.focus,.light .gt-icon-btn.focus,.light .gt-long.focus{background:#303030;color:#F2F2F2}
+
+/* @section list */
+/* List items: an optional icon, a title over a subtitle, and a trailing
+   value, action or control. Focus fills the row light and grows it 5%. A
+   dense row is 40dp, a standard one 48dp (64dp with a subtitle). */
+.gt-item{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;
+  position:relative;min-height:8.89rem;padding:2.22rem 2.96rem;border-radius:1.48rem;color:#E3E3E3;
+  -webkit-transition:-webkit-transform .12s cubic-bezier(.2,0,0,1);
+  transition:transform .12s cubic-bezier(.2,0,0,1)}
+.gt-item.dense{min-height:7.41rem;padding:1.48rem 2.22rem}
+.gt-item-icon{-webkit-flex:0 0 auto;flex:0 0 auto;width:4.44rem;height:4.44rem;margin:0 2.22rem 0 .74rem;
+  text-align:center;line-height:4.44rem;font-size:3.7rem}
+.gt-item-text{-webkit-flex:1 1 auto;flex:1 1 auto;min-width:0}
+.gt-item-title{display:block;font-size:2.96rem;line-height:4.44rem;font-weight:500;letter-spacing:.009em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gt-item.dense .gt-item-title{font-size:2.59rem;line-height:3.7rem}
+.gt-item-sub{display:block;font-size:2.22rem;line-height:2.96rem;opacity:.8}
+.gt-item-trail{-webkit-flex:0 0 auto;flex:0 0 auto;margin-left:2.96rem;font-size:2.59rem;font-weight:500;color:#8E918F;white-space:nowrap}
+
+/* A trailing value that carries a meaning keeps its colour (the tokens section). */
+.gt-item-trail.gt-good{color:#6DD58C}
+.gt-item-trail.gt-bad{color:#F2B8B5}
+.gt-item-trail.gt-warn{color:#FFB74D}
+.gt-item.focus .gt-item-trail.gt-good{color:#146C2E}
+.gt-item.focus .gt-item-trail.gt-bad{color:#B3261E}
+.gt-item.focus .gt-item-trail.gt-warn{color:#B45309}
+.gt-item.on{background:rgba(0,74,119,.4);color:#C2E7FF}
+.gt-item.on .gt-item-trail{color:#7FCFFF}
+.gt-item.focus{background:#E3E3E3;color:#131314;-webkit-transform:scale(1.05);transform:scale(1.05)}
+.gt-item.focus .gt-item-trail{color:#444746}
+.gt-item.dim{opacity:.4}
+
+/* Separators: a header, a section header in capitals, a rule. */
+.gt-list-header{font-size:4.07rem;line-height:5.19rem;padding:0 2.96rem;color:#E3E3E3}
+.gt-section-header{font-size:2.22rem;line-height:2.96rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+  padding:2.22rem 2.96rem .74rem;color:#C4C7C5}
+.gt-divider{height:1px;margin:1.48rem 2.96rem;background:#444746}
+
+.light .gt-item{color:#1F1F1F}
+.light .gt-item.on{background:#C2E7FF;color:#001D35}
+.light .gt-item.focus{background:#303030;color:#FFFFFF}
+.light .gt-item.focus .gt-item-trail{color:#C4C7C5}
+.light .gt-list-header{color:#1F1F1F}
+.light .gt-section-header{color:#444746}
+.light .gt-divider{background:#C4C7C5}
+
+/* @section tabs */
+/* Tab row: pills 32dp tall. The tab in view is selected (.on); a tab the
+   remote is on is focused. Inside a row that does not have the focus
+   (.gt-tabs.idle), the other tabs recede. */
+.gt-tabs{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;white-space:nowrap}
+.gt-tab{display:inline-block;-webkit-flex:0 0 auto;flex:0 0 auto;position:relative;height:5.93rem;line-height:5.93rem;
+  padding:0 2.96rem;border-radius:2.96rem;font-size:2.59rem;font-weight:500;letter-spacing:.007em;color:#C4C7C5;cursor:pointer;
+  -webkit-transition:background-color .2s,color .2s,opacity .2s;transition:background-color .2s,color .2s,opacity .2s}
+.gt-tabs.idle .gt-tab:not(.on):not(.focus){opacity:.4}
+.gt-tab.on{background:rgba(0,74,119,.4);color:#C2E7FF}
+.gt-tab.focus{background:#E3E3E3;color:#303030;
+  box-shadow:0 1px 2px rgba(0,0,0,.3),0 2px 6px 2px rgba(0,0,0,.15)}
+
+.light .gt-tab{color:#444746}
+.light .gt-tab.on{background:#C2E7FF;color:#001D35}
+.light .gt-tab.focus{background:#303030;color:#F2F2F2}
+
+/* @section chip */
+/* Chips (a choice or filter, 36dp) and tags (a small label: NEW, ROOT, a
+   version). */
+.gt-chip{display:inline-block;position:relative;height:6.67rem;line-height:6.67rem;padding:0 2.96rem;border-radius:1.48rem;background:transparent;border:0;font-family:inherit;cursor:pointer;outline:0;
+  font-size:2.59rem;font-weight:500;letter-spacing:.007em;white-space:nowrap;color:#C4C7C5;
+  box-shadow:inset 0 0 0 .19rem #8E918F;
+  -webkit-transition:-webkit-transform .2s cubic-bezier(.2,0,0,1),background-color .2s,color .2s;
+  transition:transform .2s cubic-bezier(.2,0,0,1),background-color .2s,color .2s}
+.gt-chip.on{background:rgba(0,74,119,.4);color:#C2E7FF;box-shadow:none}
+.gt-chip.focus{background:#E3E3E3;color:#303030;box-shadow:none;-webkit-transform:scale(1.1);transform:scale(1.1)}
+.gt-chip.dim{opacity:.4}
+
+.gt-tag{display:inline-block;height:3.7rem;line-height:3.7rem;padding:0 1.11rem;border-radius:.74rem;vertical-align:middle;
+  font-size:2.04rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;
+  background:#6DD58C;color:#0A3818}
+.gt-tag.outline{background:transparent;color:inherit;box-shadow:inset 0 0 0 .19rem currentColor}
+.gt-tag.warn{background:#FFB74D;color:#3E2400}
+
+.light .gt-chip{color:#444746;box-shadow:inset 0 0 0 .19rem #747775}
+.light .gt-chip.on{background:#C2E7FF;color:#001D35}
+.light .gt-chip.focus{background:#303030;color:#F2F2F2}
+.light .gt-tag{background:#146C2E;color:#FFFFFF}
+.light .gt-tag.warn{background:#B45309;color:#FFFFFF}
+
+/* @section overlay */
+/* What sits over a screen: a scrim, a dialog on it, and a snackbar (a short
+   message that answers a press). A page shows each by adding .show. */
+.gt-scrim{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);opacity:0;visibility:hidden;
+  -webkit-transition:opacity .2s,visibility .2s;transition:opacity .2s,visibility .2s}
+.gt-scrim.show{opacity:1;visibility:visible}
+.gt-dialog{position:relative;width:103.7rem;max-width:90%;margin:0 auto;padding:4.44rem;border-radius:5.19rem;
+  background:#282A2C;color:#E3E3E3;box-shadow:0 1px 3px rgba(0,0,0,.3),0 4px 8px 3px rgba(0,0,0,.15)}
+.gt-dialog-title{font-size:4.44rem;line-height:5.93rem;margin-bottom:2.96rem}
+.gt-dialog-body{font-size:2.59rem;line-height:3.7rem;letter-spacing:.018em;color:#C4C7C5}
+.gt-dialog-actions{margin-top:4.44rem;text-align:right}
+.gt-dialog-actions .gt-btn{margin-left:1.48rem}
+
+.gt-snackbar{display:inline-block;padding:2.22rem 2.96rem;border-radius:1.48rem;font-size:2.59rem;line-height:3.7rem;
+  background:#E3E3E3;color:#303030;box-shadow:0 1px 3px rgba(0,0,0,.3),0 4px 8px 3px rgba(0,0,0,.15);
+  opacity:0;-webkit-transform:translateY(1.48rem);transform:translateY(1.48rem);
+  -webkit-transition:opacity .2s,-webkit-transform .2s cubic-bezier(.2,0,0,1);transition:opacity .2s,transform .2s cubic-bezier(.2,0,0,1)}
+.gt-snackbar.show{opacity:1;-webkit-transform:none;transform:none}
+
+.light .gt-dialog{background:#E9EEF6;color:#1F1F1F}
+.light .gt-dialog-body{color:#444746}
+.light .gt-snackbar{background:#303030;color:#F2F2F2}
+

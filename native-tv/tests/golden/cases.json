@@ -1,0 +1,1171 @@
+{
+  "tolerance": 64,
+  "maxBad": 0.0003,
+  "cases": [
+    {
+      "name": "splash",
+      "time": 1000,
+      "args": [
+        "--screen",
+        "splash"
+      ]
+    },
+    {
+      "name": "home-rest",
+      "time": 3000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ]
+    },
+    {
+      "name": "home-hero-text-in",
+      "time": 450,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ]
+    },
+    {
+      "name": "home-focus-card",
+      "time": 3000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "right"
+        }
+      ]
+    },
+    {
+      "name": "home-row-snap",
+      "time": 3500,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "home-bar",
+      "time": 2600,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        }
+      ]
+    },
+    {
+      "name": "home-pill-stretch",
+      "time": 1590,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        }
+      ]
+    },
+    {
+      "name": "apps-leave",
+      "time": 1690,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "apps-edit",
+      "time": 3600,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        },
+        {
+          "at": 2400,
+          "longPress": true
+        },
+        {
+          "at": 3000,
+          "key": "up"
+        }
+      ]
+    },
+    {
+      "name": "apps-enter",
+      "time": 1900,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "apps-focus",
+      "time": 3200,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        },
+        {
+          "at": 2200,
+          "key": "right"
+        },
+        {
+          "at": 2260,
+          "key": "right"
+        },
+        {
+          "at": 2300,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "apps-kinds",
+      "time": 3200,
+      "fixture": "home",
+      "sort": "kind",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        },
+        {
+          "at": 2260,
+          "key": "right"
+        }
+      ]
+    },
+    {
+      "name": "apps-arrange",
+      "time": 3400,
+      "fixture": "home",
+      "sort": "kind",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1510,
+          "key": "right"
+        },
+        {
+          "at": 1600,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "longPress": true
+        },
+        {
+          "at": 2400,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "home-recents",
+      "time": 3000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1600,
+          "key": "back"
+        }
+      ]
+    },
+    {
+      "name": "setup-welcome",
+      "time": 2500,
+      "fixture": "setup",
+      "args": [
+        "--screen",
+        "setup:welcome"
+      ]
+    },
+    {
+      "name": "setup-name",
+      "time": 3000,
+      "fixture": "setup",
+      "args": [
+        "--screen",
+        "setup:welcome"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "setup-network",
+      "time": 4500,
+      "fixture": "setup",
+      "args": [
+        "--screen",
+        "setup:welcome"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "key": "down"
+        },
+        {
+          "at": 2340,
+          "key": "down"
+        },
+        {
+          "at": 2380,
+          "key": "down"
+        },
+        {
+          "at": 2420,
+          "key": "right"
+        },
+        {
+          "at": 2460,
+          "key": "right"
+        },
+        {
+          "at": 2500,
+          "key": "right"
+        },
+        {
+          "at": 2540,
+          "key": "right"
+        },
+        {
+          "at": 2580,
+          "key": "ok"
+        },
+        {
+          "at": 3300,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "setup-pin",
+      "time": 3600,
+      "fixture": "setup",
+      "args": [
+        "--screen",
+        "setup:welcome"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "key": "down"
+        },
+        {
+          "at": 2340,
+          "key": "down"
+        },
+        {
+          "at": 2380,
+          "key": "down"
+        },
+        {
+          "at": 2420,
+          "key": "right"
+        },
+        {
+          "at": 2460,
+          "key": "right"
+        },
+        {
+          "at": 2500,
+          "key": "right"
+        },
+        {
+          "at": 2540,
+          "key": "right"
+        },
+        {
+          "at": 2580,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "setup-pin-own",
+      "time": 4700,
+      "fixture": "setup",
+      "args": [
+        "--screen",
+        "setup:welcome"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "ok"
+        },
+        {
+          "at": 2300,
+          "key": "down"
+        },
+        {
+          "at": 2340,
+          "key": "down"
+        },
+        {
+          "at": 2380,
+          "key": "down"
+        },
+        {
+          "at": 2420,
+          "key": "right"
+        },
+        {
+          "at": 2460,
+          "key": "right"
+        },
+        {
+          "at": 2500,
+          "key": "right"
+        },
+        {
+          "at": 2540,
+          "key": "right"
+        },
+        {
+          "at": 2580,
+          "key": "ok"
+        },
+        {
+          "at": 3300,
+          "key": "down"
+        },
+        {
+          "at": 3400,
+          "key": "ok"
+        },
+        {
+          "at": 4300,
+          "text": "12"
+        }
+      ]
+    },
+    {
+      "name": "setup-handoff",
+      "time": 2600,
+      "fixture": "setup-settled",
+      "args": [
+        "--screen",
+        "setup:handoff"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "right"
+        },
+        {
+          "at": 1560,
+          "key": "right"
+        }
+      ]
+    },
+    {
+      "name": "setup-typing",
+      "time": 3000,
+      "fixture": "setup-settled",
+      "args": [
+        "--screen",
+        "setup:handoff"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "text": "192.168.1.10"
+        },
+        {
+          "at": 1700,
+          "key": "down"
+        },
+        {
+          "at": 1760,
+          "key": "right"
+        }
+      ]
+    },
+    {
+      "name": "setup-key-press",
+      "time": 1560,
+      "fixture": "setup-settled",
+      "args": [
+        "--screen",
+        "setup:handoff"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "right"
+        },
+        {
+          "at": 1530,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "setup-summary",
+      "time": 2600,
+      "fixture": "setup-settled",
+      "args": [
+        "--screen",
+        "setup:summary"
+      ]
+    },
+    {
+      "name": "pin-prompt",
+      "time": 2600,
+      "fixture": "setup-settled",
+      "args": [
+        "--screen",
+        "pin"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "text": "12"
+        }
+      ]
+    },
+    {
+      "name": "live-rest",
+      "time": 14000,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "live"
+      ]
+    },
+    {
+      "name": "live-focus",
+      "time": 15000,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "live"
+      ],
+      "script": [
+        {
+          "at": 13000,
+          "key": "right"
+        }
+      ]
+    },
+    {
+      "name": "settings-groups",
+      "time": 3500,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "dashboard"
+      ]
+    },
+    {
+      "name": "settings-privacy",
+      "time": 4500,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "dashboard:privacy"
+      ],
+      "script": [
+        {
+          "at": 2500,
+          "key": "down"
+        },
+        {
+          "at": 2600,
+          "key": "down"
+        },
+        {
+          "at": 2700,
+          "key": "down"
+        },
+        {
+          "at": 2800,
+          "key": "down"
+        },
+        {
+          "at": 2900,
+          "key": "down"
+        },
+        {
+          "at": 3000,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "settings-system",
+      "time": 4500,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "dashboard:options"
+      ],
+      "script": [
+        {
+          "at": 2500,
+          "key": "down"
+        },
+        {
+          "at": 2600,
+          "key": "down"
+        },
+        {
+          "at": 2700,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "settings-subsections",
+      "time": 4500,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "dashboard:apps"
+      ],
+      "script": [
+        {
+          "at": 2500,
+          "key": "up"
+        },
+        {
+          "at": 2700,
+          "key": "right"
+        },
+        {
+          "at": 2900,
+          "key": "right"
+        }
+      ]
+    },
+    {
+      "name": "settings-follows",
+      "time": 4500,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "dashboard"
+      ],
+      "script": [
+        {
+          "at": 2500,
+          "key": "down"
+        },
+        {
+          "at": 2700,
+          "key": "down"
+        },
+        {
+          "at": 2900,
+          "key": "down"
+        }
+      ]
+    },
+    {
+      "name": "catalog-grid",
+      "time": 3500,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "catalog"
+      ]
+    },
+    {
+      "name": "catalog-preview",
+      "time": 5500,
+      "fixture": "dashboard",
+      "args": [
+        "--screen",
+        "catalog"
+      ],
+      "script": [
+        {
+          "at": 2000,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "quick-main",
+      "time": 3000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "right"
+        },
+        {
+          "at": 1620,
+          "key": "right"
+        },
+        {
+          "at": 1680,
+          "key": "right"
+        },
+        {
+          "at": 1710,
+          "key": "right"
+        },
+        {
+          "at": 1740,
+          "key": "right"
+        },
+        {
+          "at": 1800,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "quick-slide",
+      "time": 1900,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "right"
+        },
+        {
+          "at": 1620,
+          "key": "right"
+        },
+        {
+          "at": 1680,
+          "key": "right"
+        },
+        {
+          "at": 1710,
+          "key": "right"
+        },
+        {
+          "at": 1740,
+          "key": "right"
+        },
+        {
+          "at": 1800,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "quick-picture",
+      "time": 3600,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "right"
+        },
+        {
+          "at": 1620,
+          "key": "right"
+        },
+        {
+          "at": 1680,
+          "key": "right"
+        },
+        {
+          "at": 1710,
+          "key": "right"
+        },
+        {
+          "at": 1740,
+          "key": "right"
+        },
+        {
+          "at": 1800,
+          "key": "ok"
+        },
+        {
+          "at": 2500,
+          "key": "down"
+        },
+        {
+          "at": 2560,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "quick-layout",
+      "time": 3800,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "right"
+        },
+        {
+          "at": 1620,
+          "key": "right"
+        },
+        {
+          "at": 1680,
+          "key": "right"
+        },
+        {
+          "at": 1710,
+          "key": "right"
+        },
+        {
+          "at": 1740,
+          "key": "right"
+        },
+        {
+          "at": 1800,
+          "key": "ok"
+        },
+        {
+          "at": 2500,
+          "key": "down"
+        },
+        {
+          "at": 2540,
+          "key": "down"
+        },
+        {
+          "at": 2580,
+          "key": "down"
+        },
+        {
+          "at": 2620,
+          "key": "down"
+        },
+        {
+          "at": 2660,
+          "key": "down"
+        },
+        {
+          "at": 2700,
+          "key": "down"
+        },
+        {
+          "at": 2740,
+          "key": "down"
+        },
+        {
+          "at": 2780,
+          "key": "down"
+        },
+        {
+          "at": 2820,
+          "key": "down"
+        },
+        {
+          "at": 2860,
+          "key": "down"
+        },
+        {
+          "at": 2900,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "profiles",
+      "time": 3000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 1620,
+          "key": "ok"
+        }
+      ],
+      "profiles": 3
+    },
+    {
+      "name": "profile-colour",
+      "time": 3000,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 1620,
+          "key": "ok"
+        },
+        {
+          "at": 2200,
+          "key": "down"
+        },
+        {
+          "at": 2260,
+          "key": "right"
+        },
+        {
+          "at": 2320,
+          "key": "right"
+        }
+      ],
+      "profiles": 3
+    },
+    {
+      "name": "rename",
+      "time": 3400,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "left"
+        },
+        {
+          "at": 1620,
+          "key": "ok"
+        },
+        {
+          "at": 2200,
+          "key": "down"
+        },
+        {
+          "at": 2230,
+          "key": "down"
+        },
+        {
+          "at": 2260,
+          "key": "ok"
+        },
+        {
+          "at": 3000,
+          "text": "Sasha"
+        }
+      ],
+      "profiles": 3
+    },
+    {
+      "name": "details",
+      "time": 3500,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "details-overview",
+      "time": 4200,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1500,
+          "key": "ok"
+        },
+        {
+          "at": 3000,
+          "key": "right"
+        },
+        {
+          "at": 3060,
+          "key": "right"
+        },
+        {
+          "at": 3120,
+          "key": "ok"
+        }
+      ]
+    },
+    {
+      "name": "search-results",
+      "time": 4200,
+      "fixture": "home",
+      "args": [
+        "--screen",
+        "home"
+      ],
+      "script": [
+        {
+          "at": 1450,
+          "key": "up"
+        },
+        {
+          "at": 1500,
+          "key": "up"
+        },
+        {
+          "at": 1560,
+          "key": "right"
+        },
+        {
+          "at": 1620,
+          "key": "right"
+        },
+        {
+          "at": 1680,
+          "key": "right"
+        },
+        {
+          "at": 1800,
+          "key": "ok"
+        },
+        {
+          "at": 3000,
+          "text": "lo"
+        }
+      ]
+    }
+  ]
+}

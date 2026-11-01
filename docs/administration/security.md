@@ -1,0 +1,317 @@
+---
+title: Security of a rooted LG webOS TV running Native Tv
+description: "How Native Tv protects itself on a rooted LG TV: the access token, closing the port, MQTT and moving from telnet to SSH."
+---
+
+# Security
+
+This server has **no authentication by default**, and binds dual-stack to
+`::` (`0.0.0.0` on a kernel without IPv6), so it is reachable from anywhere on
+your network. Anyone who can reach the port can use every enabled control. On a home LAN that is usually the point; understand
+it before exposing it more widely.
+
+- **Set a token.** Put `"token": "something-long"` in `config.json` and every
+  `/api/` request must carry `?k=something-long` or an
+  `Authorization: Bearer something-long` header. Open the dashboard once with
+  the token in the URL; the browser remembers it and the page takes it out of
+  the address bar, so it stays out of history and shared links. This gates the HTTP API only &mdash; **MQTT and the Home
+  Assistant integration are unaffected**, since they use a separate channel.
+- **Set an admin PIN.** Four digits, asked in the TV's first-run setup, where
+  0000 is offered as the default. Once one is set, the risky actions need it on
+  top of the token: installing and removing apps (including from a URL or a
+  file), SSH keys, restoring a backup, the Home Assistant tab's broker settings,
+  background services, and reboot, power off, changing the dashboard's port and the
+  network debugger. The TV app asks for it too, so holding the remote does not
+  get round it. Everyday controls (volume, input, picture, launching apps) and
+  reading the dashboard do not ask, and neither do the Server tab's other
+  switches (the time server, update checks, experimental features, history, backups). Entering the PIN opens a session of ten idle
+  minutes, kept by the browser tab or the TV app. Five wrong PINs in a row lock
+  the check for 30 seconds, doubling to an hour, for the dashboard and the TV
+  together, so someone on the network can keep the owner waiting but cannot
+  guess four digits. The PIN is stored as a salted PBKDF2-SHA256 hash in
+  `/var/lib/tvweb/admin-pin.json` (mode 0600); anyone with root on the TV can
+  read that file and try the 10,000 possibilities offline, and root is open
+  anyway while telnet is. **MQTT and the Home Assistant integration are
+  unaffected**: they are a separate channel. The default 0000 is public
+  knowledge, so it stops accidents and casual use and nobody who is trying;
+  choose your own in the Server tab. A forgotten PIN is removed by deleting
+  `/var/lib/tvweb/admin-pin.json` over ssh and restarting the server (`/var/lib/tvweb/tvwebctl restart`). The first PIN can be set from the
+  TV, or by a client that has the token, so with neither a machine on the
+  network cannot set it first and lock the owner out.
+- **A browser without the token signs in with the PIN.** Where a token is set
+  and a browser has none (or a stale one), the dashboard shows an **Enter
+  passcode** screen in place of "Unauthorised". The PIN, which is the passcode,
+  gets the browser the token, so the long link is only needed once, or never.
+  While the PIN is still the default 0000 the sign-in is refused: anyone on
+  the network could type it, which would turn the token into nothing. The link
+  or QR code on the TV keeps working either way.
+- **The Tools tab shows the TV's logs** - its system log, Native Tv's own and,
+  if asked, the kernel's - to whoever can reach the dashboard, as `/api/logs`.
+  They name the apps in use, the network and the broker the TV talks to. A
+  token gates them with the rest of the API.
+- **Syslog forwarding is off by default.** With `syslog.server` set in
+  `config.json` the same logs go to that server as plain UDP: unencrypted,
+  unauthenticated, and readable by anything on the path. Addresses,
+  credentials and postcodes are redacted unless `"redact": false` is set.
+- **Setting the clock from NTP is off by default.** With a time server set,
+  from the Server tab or as `ntp.server`, the TV takes its time from that
+  server over plain UDP, unauthenticated, and anything that can answer in its
+  place can set the TV's clock. The Server tab can change it only where
+  controls are allowed, and with the token where one is set.
+- **`"allowPower": false`** hides and refuses power off, power on and reboot,
+  in the dashboard and in Home Assistant, for a TV that should never be
+  switched off over the network. The other controls stay.
+- **Close the dashboard's port if nothing on the network uses it.**
+  `"host": "127.0.0.1"` closes the port to everything but the TV itself, which
+  is stronger than gating it with a token, and the TV app keeps working. The
+  server has no setting that turns the dashboard off: `web.enabled` is not
+  read. An MQTT-only install has no reason to expose one.
+- **The install endpoints install code.** `allowControl` gates them along
+  with everything else, so on a default install anyone who can reach the port
+  can install any app in the Homebrew Channel catalog. A catalog install must use https and match the sha256 hash the
+  catalog lists, and the package must keep to its own ids: nothing under
+  `com.webos.`, `com.palm.` or `com.lge.`, nothing already on the TV's system
+  partition, and not the Homebrew Channel or the dashboard's own package. That
+  still lets a reachable client choose which catalog app runs on the TV, so
+  `token` or `"allowControl": false` closes it.
+- **Installing from a URL or an uploaded file is opt-in.** Such a package has
+  no catalog behind it, so the routes refuse unless `"apps": {"sideload": true}`
+  is set (by the switch on the Apps tab, after a warning, or in `config.json`),
+  a `token` is set, or the request comes from the TV itself. The switch answers
+  to any client that can reach the port, so on a default install it is a
+  speed bump, not a lock; a `token` is what keeps others from turning it on. The package is held
+  to the same id rules as a catalog one, and an optional sha256 is checked when
+  given, but nothing vouches for what it does. An upload must be sent as
+  `application/octet-stream` with a `Content-Length`, because a form post is a
+  request a page on another site can send without a preflight. Once sideloading
+  is on, a client that can reach the port can run any package on the TV, so
+  turn it on only with a token or a closed port. `apps.sideload` without a
+  token opens exactly that. Switching it on from the dashboard logs a warning;
+  setting it in `config.json` does not.
+- **A catalog app can be given root.** On a default install, a client that can
+  reach the port can install an app from the Homebrew Channel catalog and run
+  its services as root, as the Homebrew Channel itself would. An app from the
+  Homebrew Channel's catalog whose services need root gets it on install
+  without a separate prompt, as it would through the Homebrew Channel, and
+  gets it again after each update, since a reinstall undoes it. Root needs
+  the Homebrew Channel. `token` or
+  `"allowControl": false` closes this too. A package from a URL, a file or an
+  `apps.repos` catalog is never elevated automatically: the request must name
+  the services listed in its preview, and a later update asks again. The TV's
+  own dashboard offers root only for the Homebrew Channel's catalog, since the
+  remote cannot name services.
+- **The install routes check the Host header.** A page on an attacker's domain
+  that resolves to the TV's address (DNS rebinding) passes the same-origin
+  check on `POST`s and looks like a request from the TV itself. The routes
+  therefore answer only to an IP address, `localhost` or a name listed in
+  `apps.hosts` in `config.json`, which is file-only. A name such as `lgtv.local`
+  has to be added there to install from it.
+- **`apps.repos` adds trust.** Each extra catalog listed there can offer
+  packages for installation, with their hashes. Its packages are not treated
+  as vetted: root for them is confirmed service by service, as for a URL, and
+  is never given back on an update. Every entry must be served over https.
+  The Apps tab can add and remove catalogs only where an install from a URL
+  is allowed (`apps.sideload`, a token, or the TV itself), since a catalog
+  added there is trusted as a URL install is, and the server logs each one
+  added.
+- **An upload disconnected while space is being reserved is cancelled before its staging file opens.** Its reservation is released, as for a connection dropped during streaming.
+- **Never port-forward this.** It is designed for a trusted LAN.
+- **Bind to `127.0.0.1` to keep the on-TV app but close the port.** With
+  `"host": "127.0.0.1"` nothing on the network can connect to port 8080, while
+  the on-TV app, which connects over the TV's own loopback, keeps working. The
+  app's QR codes are hidden in this mode, since they would point a phone at an
+  address the server no longer answers on.
+- No CORS headers are sent, so other websites cannot read your telemetry from
+  your browser. Cross-origin `POST`s are refused, and `/api/control` requires
+  `Content-Type: application/json`.
+- Remember the wider context: rooted webOS exposes an **unauthenticated root
+  telnet on port 23**. That is a far bigger exposure than this server, and it
+  is worth closing off if you have not already.
+- **The web app debugger is closed to the network.** Developer Mode, which a
+  rooted TV keeps on, opens WebAppMgr's DevTools on port 9998 to anyone on the
+  network, with no login. Every Homebrew app is inspectable, so that is code
+  running inside the Homebrew Channel, whose service runs as root, or inside
+  the on-TV app, which needs no token. The server drops the port at its firewall
+  on every interface but loopback when it starts. The rule is in memory only:
+  it goes at a reboot and comes back when the server starts. DevTools remains
+  reachable over ssh with `ssh -L 9998:localhost:9998 root@<tv-ip>` and
+  `http://localhost:9998`. Where the kernel has no `ip6_tables` (a C1, webOS 6)
+  the rule covers IPv4 only, which leaves the port open on any IPv6 address the
+  TV has. Some kernels have no firewall at all (a 50QNED80A6A, webOS 10): there
+  the port stays open, and the Server tab says so in place of its switch.
+  WebAppMgr has no setting to listen only on the TV itself, so on such a TV
+  keep it on a network untrusted devices cannot reach, such as its own VLAN or
+  a guest network that keeps devices apart. Turning Developer Mode off
+  closes it, but on a rooted TV it also stops the Homebrew Channel starting. `{ "allowNetworkDebugger": true }` in `config.json` (or toggled
+  from the Server tab) leaves the port open for `ares-inspect`, and the server
+  takes out a rule left by an earlier start. Uninstalling from the Homebrew
+  Channel removes the rule too.
+
+---
+
+---
+
+## Narrowing access
+
+| Setting                        | Browser on the network                                                   | App on the TV | MQTT  |
+| :----------------------------- | :----------------------------------------------------------------------- | :------------ | :---- |
+| `"token": "your-secret-token"` | with `?k=your-secret-token` or `Authorization: Bearer your-secret-token` | works         | works |
+| Admin PIN set                  | install, remove, SSH keys, restore, Home Assistant settings, services, the dashboard port and power need `X-Admin-Session`, from the PIN | asks for the PIN | unaffected |
+| `"host": "0.0.0.0"`            | over IPv4 only                                                           | works         | works |
+| `"host": "127.0.0.1"`          | no — port 8080 is closed to the network                                  | works         | works |
+
+`"host": "127.0.0.1"` is the one to use to keep the on-TV app while closing the port to everything else.
+
+## The release check
+
+The Server tab's **Check for updates** button, and **Check daily** once switched
+on (`"update": {"check": true}`, off by default), fetch the latest release's
+manifest from `github.com/ihtisham1211/native-tv` over HTTPS. GitHub sees the
+TV's address and the `tvweb/<version>` the request names; no other identifier is
+sent. The answer is only shown: the version and the package's SHA-256 are read
+from it, and the links offered are built from that version, never taken from the
+manifest. The installer still refuses Native Tv's own package, so a release
+cannot install itself; it is installed from the Homebrew Channel.
+
+## Moving from telnet to SSH
+
+A rooted webOS TV exposes an **unauthenticated root shell on port 23**. Anyone
+on your network gets root with no credentials, which makes every other measure
+here mitigation rather than a fix &mdash; nothing stored on the TV is secret
+while it is open.
+
+The Homebrew Channel ships dropbear, so this needs no extra software. If you
+already have your key on the TV and telnet turned off, you are done; there is
+nothing here for you.
+
+**The order matters.** The Homebrew Channel sets a placeholder root password
+(`alpine`, a publicly known default) *unless* `/home/root/.ssh/authorized_keys`
+already exists. Enabling SSH without a key installed therefore gets you
+password login as root with a password everybody knows &mdash; no safer than
+telnet.
+
+1. In the Homebrew Channel, turn **SSH** on.
+2. **Reboot.** The flag is only read at boot.
+3. Install your key. The Server tab's **SSH keys**, under Advanced, takes a
+   pasted public key, with no password involved. Or the placeholder password
+   `alpine` gets you in this once:
+   ```bash
+   ssh-copy-id root@<tv-ip>
+   ```
+   Prefer not to use that password at all? Append your key over telnet instead:
+   ```bash
+   mkdir -p /home/root/.ssh
+   echo 'ssh-ed25519 AAAA...' >> /home/root/.ssh/authorized_keys
+   chmod 700 /home/root/.ssh && chmod 600 /home/root/.ssh/authorized_keys
+   ```
+4. **Reboot again.** With a key present the placeholder password is no longer
+   set, and only key auth works.
+5. Confirm it: `ssh root@<tv-ip>`
+6. Now turn **telnet** off in the Homebrew Channel.
+
+**Do not turn telnet off before step 5.** If SSH does not come up you will have
+no root access, and recovery means re-rooting the TV.
+
+A key is a way in that outlasts the dashboard, so the Server tab changes keys
+only with a `token` set, even from the TV itself: a page in the TV's browser
+reached through a rebinding name, or any app on the TV, also connects from the
+TV. Without a token it only lists them, by fingerprint. Its **Delete the key file** puts the `alpine` password back from
+the next reboot, for a TV whose keys are lost; add a key again straight after.
+
+`deploy.sh` prefers SSH and falls back to telnet automatically, so it keeps
+working throughout. `--telnet` forces the old path if you need it. It uses the
+computer's own SSH keys and `known_hosts`; a key or `known_hosts` file of its own for the TV
+is set as `NATIVETV_SSH_KEY` and `NATIVETV_KNOWN_HOSTS`, in the environment or in
+`~/.config/nativetv/deploy.env`.
+
+---
+
+## Hardening the MQTT bridge
+
+Worth doing properly, because this is the part that reaches beyond the TV. The
+broker credentials live in `config.json` **on the TV**, and a rooted webOS set
+has an unauthenticated root shell on port 23 &mdash; so treat anything stored
+there as readable by anyone on your network. `tvweb` tightens the file to `0600`
+at startup, but that is mitigation, not a fix.
+
+The question that matters is not whether the bridge is authenticated (it is),
+but **what that credential is allowed to do**. Reuse your main Home Assistant
+MQTT user and a compromised TV can publish to any topic on the broker &mdash;
+including the ones driving your lights, locks or alarms.
+
+**1. Give the TV its own broker user with a restricted ACL.** With this in
+place, a compromised TV can only lie about its own telemetry:
+
+```conf
+# /etc/mosquitto/aclfile
+user lgtv
+topic write  lgtv/#
+topic read   lgtv/command/#
+topic write  homeassistant/+/lg_tv/#
+```
+
+The last line is deliberately narrow: unrestricted write access to
+`homeassistant/#` would let a compromised TV register arbitrary new entities
+via MQTT Discovery.
+
+**2. Encrypt the connection.** Without TLS the username and password cross your
+network in cleartext in every CONNECT packet, and a reconnect loop resends them
+every few seconds:
+
+```json
+"mqtt": { "tls": true, "port": 8883 }
+```
+
+If the connection fails with "unable to get local issuer certificate", the TV
+does not trust the broker's CA (Let's Encrypt's ISRG Root X1 is missing on older
+firmware). Copy the root that signs the broker's chain to
+`/var/lib/tvweb/mqtt-ca.pem` and restart the server; the broker is then
+verified against that file instead of the built-in list. The same file works for a
+broker with a self-signed certificate or a private CA.
+
+Set `"tlsRejectUnauthorized": false` only if your broker uses a self-signed
+certificate and the TV cannot be given its CA &mdash; the traffic stays
+encrypted, but the broker is no longer authenticated, so only do it on a
+network you trust.
+
+**3. Consider network segmentation.** Putting the TV on its own VLAN that can
+reach only the broker is sound defence in depth. It does not replace the ACL:
+the TV must reach the broker by definition, so a stolen credential still works
+from inside the segment. The ACL is what limits the blast radius.
+
+**4. Close the root telnet.** While port 23 is an open root shell, nothing
+stored on the TV is secret and every measure above is mitigation around that
+fact. Installing openssh via the Homebrew Channel and disabling telnet is the
+single biggest improvement you can make.
+
+---
+
+## Home title details, search and Netflix links
+
+A configured TMDB key (set in the dashboard's Native Tv Home tab or as `tmdbKey` in `config.json`;
+the dashboard never shows it again) enables on-demand title details and search. The server
+sends the selected movie/series ID or the entered search query to
+`api.themoviedb.org`, with the owner's API key and `en-US` language. The TV
+page uses only same-origin endpoints. Search requires two characters and a
+350 ms pause; person and adult results are excluded. Search text is not
+logged or stored as a cache key; cached results still reveal the titles
+returned. `home-content.json` has mode 0600 and holds at most 40 replies.
+Removing the key hides the features and prevents reads from serving saved
+metadata.
+
+The daily Home feed refresh asks TMDB for the details of each title it would list, the
+same request a title opens with, and keeps only titles with a YouTube trailer or, when
+`netflixDeepLinks` is on, a Netflix link.
+
+A configured YouTube key (set in the dashboard's Native Tv Home tab or as `youtubeKey` in
+`config.json`; the dashboard never shows it again) makes the same refresh ask
+`www.googleapis.com`, over HTTPS, for the most popular videos, with the key. The key is saved
+as 20 to 100 letters, digits, `-` and `_`, and nothing else is sent with it.
+
+`netflixDeepLinks: true` separately enables requests to `www.wikidata.org`
+for the selected title's exact Wikidata QID, obtained from TMDB. Wikidata
+receives that QID and the TV's public IP, without the TMDB key, profile name
+or search query. The server accepts only an unambiguous numeric `P1874`
+Netflix ID and constructs the native Netflix launch target itself; the page
+cannot supply an arbitrary deep-link URL. Saved mappings can be used offline.
+The option defaults off; other watch-provider services are not queried.

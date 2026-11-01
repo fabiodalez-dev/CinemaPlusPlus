@@ -1,0 +1,37 @@
+# Attaches the Homebrew Channel package to each release. The store's listing
+# reads releases/latest/download/<id>.manifest.json, so a published release is
+# what users get; a pre-release is never "latest" and reaches only those who
+# install it by hand.
+name: Homebrew Channel
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    # An Arm runner: the SDK that cross-compiles the TV's runtime has no x86_64 Linux build.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      # The package is named from native-tv/VERSION, which the daemon is built with;
+      # a mismatch would ship one version under the other's name.
+      - name: tag matches the version in the code
+        run: |
+          code=$(tr -d '[:space:]' < native-tv/VERSION)
+          tag="${GITHUB_REF_NAME#v}"
+          [ "$code" = "$tag" ] || { echo "tag v$tag, but native-tv/VERSION says $code"; exit 1; }
+
+      - name: build
+        uses: ./.github/actions/package-ipk
+
+      - name: attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.ipk dist/*.manifest.json --clobber

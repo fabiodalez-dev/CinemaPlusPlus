@@ -1,0 +1,121 @@
+---
+description: "The Native Tv app on an LG webOS TV’s home screen: the same readings and controls, driven by the remote."
+---
+
+# The TV app
+
+The dashboard can also run directly on the TV's home screen, driven by the remote, for when there is no phone or laptop to hand.
+
+It is drawn by the Native Tv client in the style of Google TV: a dark page with one accent colour, cards that lift and glow when they are focused, and a top bar with the profile, the tabs and the clock. The pages below are its own screens, not web pages. Its type, colour, shape, spacing, focus, motion and icons follow Google's TV Design Kit (Material 3); [Material 3 Expressive](../development/material-3-expressive.md) records the values and where the client differs.
+
+Because the panel is an OLED, no screen of the app holds still at full brightness: thirty seconds without a key or a click dim it to two thirds black, and the first key or click after that only wakes it. This holds for Home, Live, Settings, the catalogue and the setup pages alike; the TV's own screen saver is left as it is set.
+
+### How smooth it is
+
+The app is drawn on the GPU at the display's 60 frames a second, with no browser, JavaScript or garbage collector between the remote and the picture. How it holds that on a TV:
+
+* **Few draw calls.** A frame's shapes, pictures and text are batched by kind, so a row of cards costs one draw per kind, not one per card. A frame never exceeds 40 draw calls (32 is typical; Home with its icons and posters measured 41 on a B3, and its budget is 48), 8192 vertices and 64 MB of textures, and a draw call costs the B3 about 0.03 ms.
+* **Pictures never stall a frame.** Posters and icons are decoded on worker threads at the size they are drawn, uploaded at most 1 MB a frame and faded in over 220 ms.
+* **Motion keeps its momentum.** Rows, pages, lists, drawers and the tab pill move on springs that carry their position and speed over when the next key arrives, so holding a direction glides on instead of restarting. Focus and the keyboard are short tweens (80 to 170 ms).
+* **Keys are read after the wait for the display.** The B3's driver blocks the first GL call of a frame for about 21 ms roughly every seven seconds; the loop takes that wait before it reads the clock and the keys, not after.
+* **Priority.** The TV runs a load average near 30, and a client at normal priority is woken up to several milliseconds late, so the client raises its own priority to -10 where the TV allows it.
+* **Nothing moves, nothing is drawn.** A still screen draws no frames, and slow ambient motion (the hero picture's drift) is paced at 30 frames a second, also while a pointer moves or the window system sends events the client does not use.
+
+Measured on an LG OLED65B3PUA (webOS 10.3.2, 1920×1080) with the load average at about 32, on 29 October 2026: frames came 14 to 19 ms apart at normal priority (95th percentile 18.4 ms) and 15 to 18 ms with the raised priority (95th percentile 17.5 ms), against 16.7 ms for a perfect 60 Hz. The driver's wait shows as one 35 ms interval about every seven seconds, whatever the frame holds. The cases that navigate Home and the Quick drawer on a real TV check the frame intervals against limits ([the testing page](../development/testing.md) has them), and `--perf` writes every frame's interval, draw calls and vertices to a file.
+
+### Live
+
+The **Live** tab is the TV's own readings as cards: the processor's load with a line of its recent readings, memory and swap, the SoC temperature, the Wi-Fi link and the rate in and out, how long the TV has been up, the panel's hours and when its pixel refresher is due, and the input in front with its resolution, refresh rate, HDR and VRR. It reads the server twice a second while it is open: numbers count to their new value and the bars grow, instead of jumping, and the processor's line keeps half a minute. OK reads at once. Back returns to the Metrics page of Settings when Live was opened from there, and goes to Home otherwise. A card that has no reading on a TV, such as the thermal sensor on one that has none, shows a dash. Until the first reading arrives, a thin turning arc with a short label stands in for the cards.
+
+### Settings
+
+**Settings** is two panes that are always on screen: the dashboard's ten sections (Metrics, Apps, OLED Care, Game, Screen Saver, Home, Privacy, Service Menu, System and Settings) in a list on the left, a third of the width, and the focused section's page on the right. A section that this TV does not have, such as OLED Care on an LCD, is left out. Moving through the list shows each section's page beside it at once. Each page is split into named subsections of a few rows (Apps has Installed, LG launcher, Quick Access, System apps, Kept ready and LG bloatware), shown as a row of pills above the rows, with only the chosen subsection's rows below. Under the rows, a panel says what the focused row is and what OK does to it. On Screen Saver, the first page lists the screen savers with **Start screen saver** under them, and Options holds when it starts (where the TV reports it) and its brightness. Settings are switches, which slide when they change, values that OK steps to the next of (shown between two chevrons), actions, and links that open another page. Settings opens from the Native Tv tile on LG's home screen and, while [Native Tv Home](../dashboard/home.md) is the home screen, from its **Native Tv** tile: that tile is this app, already in front, so OK opens Settings in the app and asks the server for no launch. Settings is a page of its own, without the Home bar: Up from the first row stops at the section's tabs, and Back leaves for where Settings was opened from.
+
+![Settings on a B3: the sections on the left and the Metrics page on the right](../screenshots/tv-settings.png)
+
+* **Up / Down**, or the Magic Remote's wheel: in the list, another section; in the page, through the rows, skipping section headings; from the first row, up to the subsection pills.
+* **Right** or **OK** in the list: into the page. **Left** or **Back** in the page: back to the list. **Back** in the list: close Settings. **Left** and **Right** never change the section. On a row whose value has a chevron on each side, **Left** and **Right** step to the previous and the next value (the way back to the list is **Back**).
+* **Left / Right** on the pills: the previous or next subsection; **Down** returns to the rows. A section opens on the subsection it was left on.
+* **Channel Up / Channel Down** (or **Page Up / Page Down**): jump 6 rows.
+* **OK**: change the row. A change that is hard to undo, such as switching an OLED protection off, uninstalling an app, powering off or resetting a layout, asks for a second OK within five seconds, and Back cancels it.
+* **Back**: close a list inside a section (Privacy's consents, Home's channels), then return to the list, then close Settings.
+* **Magic Remote pointer**: clicking a row selects it and clicking it again acts on it.
+
+A change shows the moment OK is pressed: the switch has already slid and a faint dot says it is on its way. It is sent to the same server routes as the browser dashboard behind the page, and the section is read again afterwards. A refusal puts the old value back and says why. Metrics and System refresh every ten seconds while open; a refresh keeps the focused row, the subsection and the scroll where they were. The first read of a section shows a thin turning arc where its rows will be. Opening or closing the web dashboard to the network restarts the server: the row reads "Switching…" and the page waits until the server answers again.
+
+### First-run setup wizard
+
+Opening the TV app on a fresh install starts an on-screen setup wizard to configure the TV in a few quick steps with the remote. Whatever the app is opened on (its tile, Home, or a Settings page), it first asks the server whether first-run setup is done, as the browser dashboard always did, and opens the wizard's welcome page when it is not; the first frames wait behind the dark cover for the answer, and a server that is still starting is asked again every two seconds.
+
+1. **Name this TV**: The keyboard comes up with the name the TV's model gives it: `B3` on an OLED65B3PUA, `C2` on an OLED42C24LA, `UQ8000` on a 55UQ8000, `LGTV` when the model is not known. OK on **Next** keeps it, or type another name. It is the name of the main profile on Home, which the profile editor can change later, and it shows on the summary at once; if the server refuses it, the old name comes back with a message.
+2. **Admin PIN**: Four digits that the TV and the web dashboard ask for before installing or removing apps, changing SSH keys, restoring a backup, restarting or powering off the TV, and the other actions that open the TV to more of the network. **Use 0000** sets the default in one press; the page says that anyone who knows it can use it, so a PIN of the person's own is better, chosen now or changed later on the web dashboard's Server tab. **Choose my own** opens a digit pad for four digits, masked as they are typed, and Next refuses fewer than four. A TV that already has a PIN skips this step, and the steps after it count one fewer.
+3. **Web dashboard access**: Choose between opening the web dashboard to devices across your home network or keeping it private to this TV only (`127.0.0.1`).
+4. **Home Assistant integration**: Connect your TV to Home Assistant via MQTT. The TV displays a QR code to scan with your phone, allowing you to enter MQTT broker details easily without typing credentials on the remote. Beside the code is an on-screen keyboard for typing the broker's address, port, user and password with the remote instead, one field after another; Back returns to the previous field, and the TV shows when the broker has connected.
+5. **Active Standby (Always-on)**: On TVs with Always Ready support (such as LG C2 or G2), choose whether Native Tv and Home Assistant remain connected with the screen off so the TV can be controlled and turned back on over the network.
+6. **Summary**: Review your setup, the admin PIN included (Default (0000) or Set), and open the dashboard with a single click.
+
+The choices show as made the moment OK is pressed and are written behind the page (a refusal puts the old answer back and says so); only the dashboard network choice, which restarts the server, and the phone link wait for the server, and say so with a breathing dot and "Saving…". The PIN waits for the server too, because the session it answers with is what every later request carries. A row of dots at the bottom of each page shows how far along the wizard is, and a line of key hints sits under it. Left or Back returns to the previous step, as it always did; Back on the welcome page leaves setup, which then starts again the next time the app opens. When the app is opened from **Settings** to connect Home Assistant, only the phone link and the keyboard appear and Back returns to Settings.
+
+All choices made during setup can be changed at any time from the TV app's **Settings** or the web dashboard.
+
+![Welcome screen of the Native Tv TV app setup wizard](../screenshots/tv-app-setup-welcome.png)
+
+*The setup wizard welcome screen.*
+
+![Admin PIN choice in the TV app setup wizard](../screenshots/tv-app-setup-pin.png)
+
+*Choosing the admin PIN: the default 0000, or four digits of the person's own.*
+
+![Network access choice in the TV app setup wizard](../screenshots/tv-app-setup-network.png)
+
+*Choosing whether the web dashboard is open to devices on the home network or TV-local only.*
+
+![Home Assistant phone pairing QR code in the TV app setup wizard](../screenshots/tv-app-setup-handoff.png)
+
+*Scanning the phone handoff code to configure Home Assistant without typing on the remote.*
+
+![Setup wizard summary screen ready to open the dashboard](../screenshots/tv-app-setup-summary.png)
+
+*The final summary screen confirming your settings before opening the dashboard.*
+
+> [!TIP]
+> **Testing the setup wizard**: To try the setup flow without changing the TV, set `"emulateSetup": true` in `/var/lib/tvweb/config.json`: the TV app then opens setup, and its actions change nothing. A browser can open the same screens at `/assets/google-tv/pages/dashboard/index.html?setup=1` on the server's address.
+
+### The admin PIN prompt
+
+Once a PIN is set, the server refuses the actions it guards until it is given the PIN, whoever asks, and the TV app is not exempt: anyone holding the remote would otherwise bypass it. When the server refuses an action started on the TV (installing or removing an app, restarting or powering off the TV, and the others listed above), the TV app opens the PIN screen over whatever was showing: a masked field and a digit pad. **Unlock** posts the four digits; a wrong PIN says so and clears the field, and after several wrong ones the screen says how many seconds to wait. Back cancels. A right PIN toasts "Unlocked. Do that again." and returns to where the screen came from; the refused action is not repeated. The unlock stays open until ten minutes pass without a guarded action. First-run setup never opens the prompt, as it sets the PIN itself; the Settings entry for connecting Home Assistant does.
+
+![The admin PIN prompt on the TV](../screenshots/tv-app-pin-prompt.png)
+
+*The PIN screen, with two digits typed.*
+
+### Pairing and settings
+
+In Settings, the **Settings** section gives the web dashboard's address, with a QR code to scan on a phone (OK on the address), and the TV's DNS name under it where the home network's DNS has one. Opening the web dashboard to the network or closing it restarts the server, and the TV app waits until it answers again.
+
+Scanning the code automatically pairs the phone with the TV, passing the access token if one is configured, allowing the dashboard to be opened without typing an IP address with the remote.
+
+### Installing apps and system app hiding
+
+The **Apps** section lists the apps installed from outside LG's store, each with an uninstall that takes a second OK, the parts of the LG launcher (LG's Home screen) and the inputs shown on it, the keys of Quick Access, the system apps that can be hidden, the apps LG keeps ready in the background, and LG's bloatware, the background services that can be turned off.
+
+**Install homebrew apps** opens the catalog: the Homebrew Channel's apps as a grid of tiles, updates first and then by title, each marked Update, Installed or Homebrew Channel, with the focused app's version, size and description under the grid. OK on a new app or an update has the server fetch and check it, and then shows what it would change: the version, the background services, free space, whether the app asks to run its services as root (a switch, offered only for packages the Homebrew Channel has vetted), and whether it replaces a version from LG's store. Nothing is installed until OK on **Install**; **Cancel**, or Back, throws the download away. While it runs, a progress card replaces the page and Back waits for it to finish; the result then says what was installed or why it failed. OK on an installed app uninstalls it after a second OK; the tile is dimmed and reads Removing… until the TV answers, and comes back if it refuses. The first load of the catalogue shows a thin turning arc.
+
+### Native Tv Home
+
+The **Home** section sets up [Native Tv Home](../dashboard/home.md) from the TV, as the browser dashboard's Home tab does, and is left out on a TV Native Tv Home is not offered on. It has the on/off switch (a second press confirms), a way to open Native Tv Home while it is on, the order of its rows, then a section for each row in that order: each row's Order (Your order or Last opened, and By kind for the apps, with a **Kinds** list where OK moves a kind up one), apps and inputs each shown or hidden (an app has two switches, one for Native Tv Home's Your apps row and one for the Apps tab, which keep separate lists), and the channels added, each removed with OK, with **Add channels** listing the TV's channels not yet on Home. Then **Reset the layout**. Apps are moved and hidden on Native Tv Home itself, by holding OK on an app ([editing the apps](../dashboard/home.md#editing-the-apps)), and the other tiles on the browser dashboard's Home tab; with the apps by kind, holding OK on a row of the Apps screen lifts it, Up and Down move it, OK saves and Back puts it back.
+
+### Sleep timer and power
+
+The **System** section has the sleep timer under **Timers**: each press of OK moves it to the next of 10, 30, 60, 90 and 120 minutes, then off. **Switch off when idle** follows it, with Off, 15 and 30 minutes, then every hour up to eight (OK steps it on, Left and Right step either way; it needs `allowControl` and `allowPower`, see [the browser dashboard](../dashboard/advanced.md#switch-off-when-idle) for what counts as idle). Its **Power** section, last in the tab, has **Power off** and **Reboot**, the full restart the browser dashboard's Control tab offers. Each takes a second press of OK within five seconds, and warns first while an app is installing. Both are left out when `allowPower` is false in `config.json`, as on the browser dashboard.
+
+### Adding and removing the app
+
+A first install of Native Tv adds the app to the TV's home screen; updating an existing install leaves the home screen alone. The app is the Native Tv client itself, opened on the dashboard screen, and it is brought up to date with the server at each start of the server.
+
+The app can be added or removed at any time:
+
+* **From the web dashboard**: Go to the **Server** tab and toggle the TV app.
+* **From deploy.sh**: Pass `--app` to add it or `--no-app` to omit it during installation.
+
+[Native Tv Home](../dashboard/home.md) is this same app opened on its Home screen, so it needs the app on the home screen: with the app removed Home cannot be switched on, and Home that is on gives LG's Home back. Removing the app changes nothing else, since the dashboard server continues to run in the background and reaches any browser on the network regardless. Where a TV model will not take the app, the control is hidden and everything else works as before.
