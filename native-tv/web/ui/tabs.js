@@ -16,6 +16,7 @@ const TABS = {
   oledcare:    'oledpane',
   screensaver: 'sspane',
   game:        'gamepane',
+  ledstrip:    'ledpane',
   privacy:     'privpane',
   mqtt:        'mqttpane',
   server:      'serverpane',
@@ -27,7 +28,7 @@ const TABS = {
 const SECTION_OF = {
   control: 'overview', metrics: 'overview',
   apps: 'apps', catalogue: 'apps', homescreen: 'apps', home: 'apps',
-  oledcare: 'display', screensaver: 'display', game: 'display',
+  oledcare: 'display', screensaver: 'display', game: 'display', ledstrip: 'display',
   privacy: 'privacy',
   mqtt: 'settings', server: 'settings', tools: 'settings', advanced: 'settings', servicemenu: 'settings'
 };
@@ -135,6 +136,7 @@ function showTab(name) {
   if (name === 'advanced') { loadAdvSettings(); loadServerStatus(); loadScreenTime(); }
   if (name === 'servicemenu') loadServiceMenu();
   if (name === 'screensaver') loadScreensavers();
+  if (name === 'ledstrip') loadLedStrip();
   if (name === 'privacy') loadPrivacy();
   if (name === 'mqtt') loadSettings();
   // Opened at the newest line, wherever it was left scrolled.

@@ -59,6 +59,8 @@
 #include "service/preload.hpp"
 #include "service/memory_keep.hpp"
 #include "daemon/memory_keeper.hpp"
+#include "daemon/led_strip.hpp"
+#include "ambilight/controller.hpp"
 #include "service/control_commands.hpp"
 #include "service/config_settings.hpp"
 #include "service/remote_input.hpp"
@@ -10820,6 +10822,121 @@ void HttpFrontDoor::setRemoteKey(HttpExchange &exchange) const {
                            "{\"ok\":true}");
 }
 
+void HttpFrontDoor::ledStripAction(HttpExchange &exchange, const std::string &action) const {
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    const auto fail = [&respond](int status, const std::string &error) {
+        Json response = Json::object();
+        response.set("ok", Json::flag(false));
+        response.set("error", Json::text(error));
+        respond(status, response);
+    };
+    const HttpRequest &request = exchange.request();
+    if (!setupJsonContentType(request)) {
+        fail(415, "Content-Type must be application/json");
+        return;
+    }
+    if (!sameOriginRequest(request)) {
+        fail(403, "cross-origin request refused");
+        return;
+    }
+    if (!exchange.setBodyLimit(4096)) {
+        sendSetupError(exchange, 413, "request body too large", true);
+        return;
+    }
+    std::string body;
+    char buffer[1024];
+    for (;;) {
+        const int count = exchange.readBody(buffer, sizeof(buffer));
+        if (count == 0)
+            break;
+        if (count < 0) {
+            sendSetupError(exchange, 400, "invalid request body", true);
+            return;
+        }
+        body.append(buffer, static_cast<size_t>(count));
+    }
+    const Json payload = body.empty() ? Json::object() : Json::parse(body);
+    if (!payload.isObject()) {
+        fail(400, "malformed JSON");
+        return;
+    }
+    const auto run = [this](const std::vector<std::string> &arguments, int seconds) {
+        ChildOptions options;
+        options.arguments = ambilightCommand(dataRoot_, arguments);
+        options.environment = ambilightEnvironment(dataRoot_);
+        options.timeout = std::chrono::milliseconds(seconds * 1000);
+        options.maximumOutputBytes = 64 * 1024;
+        return children_.run(options);
+    };
+    if (action == "/scan") {
+        // A strip takes one connection: while ours holds it, it does not
+        // advertise, so the scan lists it from the settings.
+        const ChildResult result = run({"scan", "10"}, 20);
+        const Json devices = result.succeeded() ? Json::parse(result.standardOutput) : Json();
+        if (!devices.isArray()) {
+            fail(502, "the scan did not answer");
+            return;
+        }
+        Json response = Json::object();
+        response.set("ok", Json::flag(true));
+        response.set("devices", devices);
+        respond(200, response);
+        return;
+    }
+    if (action == "/preview") {
+        std::vector<std::string> arguments;
+        if (payload["ambient"].boolean()) {
+            arguments = {"ambient-preview"};
+        } else {
+            const Json rgb = payload["rgb"];
+            const std::string address = payload["address"].isString() ? payload["address"].string() : "";
+            if (!rgb.isArray() || rgb.size() != 3 || (!address.empty() && !ambilight::validAddress(address))) {
+                fail(400, "rgb and address expected");
+                return;
+            }
+            arguments = {"preview", address.empty() ? "-" : address};
+            for (size_t i = 0; i < 3; ++i)
+                arguments.push_back(std::to_string(std::max(0, std::min(255, int(rgb[i].number())))));
+        }
+        const ChildResult result = run(arguments, 10);
+        const Json answer = result.succeeded() ? Json::parse(result.standardOutput) : Json();
+        if (!answer.isObject()) {
+            fail(502, "the strip's process did not answer");
+            return;
+        }
+        respond(answer["ok"].boolean() ? 200 : 400, answer);
+        return;
+    }
+    // Save: the fields given, checked, over the ones saved.
+    JsonFile configFile(configPath_);
+    const JsonFileResult loaded = configFile.load();
+    Json merged = loaded.found && loaded.value["ledStrip"].isObject() ? loaded.value["ledStrip"] : Json::object();
+    for (const std::string &key : payload.keys()) merged.set(key, payload[key]);
+    const ambilight::LedConfig cleaned = ambilight::cleanLedConfig(merged);
+    Json change = Json::object();
+    change.set("ledStrip", ambilight::ledConfigJson(cleaned));
+    std::string error;
+    if (!ConfigStore(configPath_).setTopLevel(change, &error)) {
+        fail(500, "could not save setting: " + error);
+        return;
+    }
+    // A strip set to follow starts now; one switched off stops by itself
+    // within a second, with the room light.
+    Logger *logger = logger_;
+    (void)ensureAmbilight(dataRoot_, configPath_, [logger](const std::string &message) {
+        if (logger) logger->info(message);
+    });
+    Json response = ledStripStatus(dataRoot_, configPath_);
+    response.set("ok", Json::flag(true));
+    respond(200, response);
+}
+
 void HttpFrontDoor::setMemoryToggle(HttpExchange &exchange) const {
     const auto respond = [&exchange](int status, const Json &payload) {
         (void)exchange.respond(status,
@@ -18710,6 +18827,25 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
                                 {"X-Content-Type-Options", "nosniff"},
                                 {"Referrer-Policy", "no-referrer"}},
                                response.dump());
+        return;
+    }
+    if (request.uri == "/api/ledstrip" && request.method == "GET") {
+        (void)exchange.respond(200,
+                               {{"Content-Type", "application/json"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               ledStripStatus(dataRoot_, configPath_).dump());
+        return;
+    }
+    if ((request.uri == "/api/ledstrip" || request.uri == "/api/ledstrip/scan" ||
+         request.uri == "/api/ledstrip/preview") && request.method == "POST") {
+        if (!config_.allowControl) {
+            sendSetupError(exchange, 403, say::msg("srv.controlsOff", "controls disabled in config"));
+            return;
+        }
+        if (rejectCrossSitePost(exchange))
+            return;
+        ledStripAction(exchange, request.uri.substr(std::string("/api/ledstrip").size()));
         return;
     }
     if (request.uri == "/api/memory/toggle" && request.method == "POST") {

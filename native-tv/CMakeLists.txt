@@ -77,6 +77,7 @@ add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
   src/daemon/hostname_cache.cpp
   src/daemon/services_keeper.cpp
   src/daemon/memory_keeper.cpp
+  src/daemon/led_strip.cpp
   src/daemon/tv_app_manager.cpp
   src/daemon/event_loop.cpp src/daemon/heartbeat.cpp src/daemon/json_file.cpp
   src/daemon/hdmi_seen.cpp src/daemon/last_app.cpp src/daemon/apps_state.cpp
@@ -95,6 +96,7 @@ add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
 target_link_libraries(nativetv_daemon PUBLIC nativetv_core nativetv_client_config nativetv_state
   Threads::Threads PkgConfig::CURL)
 target_link_libraries(nativetv_daemon PUBLIC nativetv_history)
+target_link_libraries(nativetv_daemon PUBLIC nativetv_ambilight)
 target_compile_options(nativetv_daemon PRIVATE -Wall -Wextra -Werror)
 add_library(civetweb STATIC third_party/civetweb/src/civetweb.c)
 target_include_directories(civetweb PUBLIC third_party/civetweb)

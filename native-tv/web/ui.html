@@ -1880,6 +1880,7 @@
 <button type="button" class="tab" role="tab" id="tab-btn-oledcare" data-tab="oledcare" aria-controls="oledpane" aria-selected="false" tabindex="-1" hidden><span data-t="sub.oled">OLED care</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-screensaver" data-tab="screensaver" aria-controls="sspane" aria-selected="false" tabindex="-1"><span data-t="sub.savers">Screen savers</span></button>
 <button type="button" class="tab" role="tab" id="tab-btn-game" data-tab="game" aria-controls="gamepane" aria-selected="false" tabindex="-1" hidden><span data-t="sub.game">Game mode</span></button>
+<button type="button" class="tab" role="tab" id="tab-btn-ledstrip" data-tab="ledstrip" aria-controls="ledpane" aria-selected="false" tabindex="-1"><span data-t="sub.ledstrip">LED strip</span></button>
 <span class="tab-ind"></span></div>
       <section class="panel grid" id="oledpane" role="tabpanel" hidden>
 <article class="card tonal" style="--p:2;--t:4;--d:7">
@@ -1977,6 +1978,40 @@
 <div class="pv-note" id="ss-note"></div>
 </article>
 </section>
+      <section class="panel grid" id="ledpane" role="tabpanel" hidden>
+        <div class="card" style="--p:2;--t:4;--d:12">
+          <h2 data-t="led.title">LED strip behind the TV</h2>
+          <p class="sub" data-t="led.desc">A Bluetooth strip of the ELK-BLEDOM family (the Lotus Lantern app) follows the colours on screen, softly, and when the TV goes off it takes the room light chosen here. Close Lotus Lantern on the phone first: a strip takes one connection at a time.</p>
+          <p class="sub led-status" id="led-status"></p>
+          <div class="setting-row">
+            <label for="led-address" data-t="led.strip">Strip</label>
+            <select id="led-address"><option value="" data-t="led.noStrip">None</option></select>
+            <button type="button" class="btn btn-tonal" id="btn-led-scan" onclick="ledScan()" data-t="led.scan">Find strips</button>
+          </div>
+          <div class="setting-row">
+            <label for="led-follow" data-t="led.follow">Follow the colours of the screen</label>
+            <input type="checkbox" id="led-follow">
+          </div>
+          <div class="setting-row">
+            <label for="led-brightness" data-t="led.brightness">Brightness while watching</label>
+            <input type="range" id="led-brightness" min="5" max="100" step="5">
+          </div>
+          <div class="setting-row">
+            <label for="led-ambient" data-t="led.ambient">Room light when the TV is off</label>
+            <select id="led-ambient"></select>
+          </div>
+          <div class="setting-row">
+            <label for="led-ambient-brightness" data-t="led.ambientBrightness">Room light brightness</label>
+            <input type="range" id="led-ambient-brightness" min="5" max="100" step="5">
+          </div>
+          <div class="setting-row">
+            <button type="button" class="btn btn-tonal" id="btn-led-try" onclick="ledTry()" data-t="led.try">Try the room light</button>
+            <button type="button" class="btn btn-filled" id="btn-led-save" onclick="ledSave()" data-t="common.save">Save</button>
+          </div>
+          <p class="sub" id="led-scan-msg" role="status"></p>
+          <pre class="sub" id="led-log" style="white-space:pre-wrap;max-height:12em;overflow:auto"></pre>
+        </div>
+      </section>
       <section class="panel grid" id="gamepane" role="tabpanel" hidden>
 <article class="card" style="--p:2;--t:4;--d:5">
 <div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-sports_esports"/></svg></span><h2 data-t="game.now">Playing now</h2></div>
@@ -4150,6 +4185,7 @@
     <script src="/assets/ui/servicemenu.js"></script>
     <script src="/assets/ui/oled.js"></script>
     <script src="/assets/ui/screensavers.js"></script>
+    <script src="/assets/ui/ledstrip.js"></script>
     <script src="/assets/ui/mqtt.js"></script>
     <script src="/assets/ui/tools.js"></script>
     <script src="/assets/ui/tabs.js"></script>

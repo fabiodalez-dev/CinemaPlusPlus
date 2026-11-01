@@ -40,6 +40,7 @@
 #include "daemon/remote_buttons.hpp"
 #include "daemon/remote_button_log_watcher.hpp"
 #include "daemon/memory_keeper.hpp"
+#include "daemon/led_strip.hpp"
 #include "daemon/remote_keys_reconciler.hpp"
 #include "daemon/sam_rescan_manager.hpp"
 #include "daemon/screen_time_enforcer.hpp"
@@ -2031,6 +2032,17 @@ int main(int argc, char **argv) {
                 };
                 (void)loop.scheduleAfter(std::chrono::milliseconds(30000), enforce);
                 (void)loop.scheduleEvery(std::chrono::minutes(5), enforce);
+            }
+            // The LED strip's process: started when the strip follows the
+            // screen, and again if it stopped (a crash, an update).
+            {
+                const std::string configPath = loaded.path;
+                const auto ensureStrip = [&logger, configPath]() {
+                    (void)ensureAmbilight(dataDirectory(), configPath,
+                        [&logger](const std::string &message) { logger.info(message); });
+                };
+                (void)loop.scheduleAfter(std::chrono::milliseconds(5000), ensureStrip);
+                (void)loop.scheduleEvery(std::chrono::seconds(20), ensureStrip);
             }
             // Apps LG's memory manager keeps open (Cinema's keepInMemory):
             // written at start, counted by memchute from the next restart.
