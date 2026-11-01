@@ -17,6 +17,8 @@ Su questa TV il processo delle app web di LG (`WebAppMgr`) arriva a 270-420 MB c
 - Installazione sulla 43UN70006LA, webOS 5.6: il servizio parte, la dashboard risponde, l'app TV si apre con SDL2 e OpenGL ES.
 - Misure: memoria e CPU del servizio e dell'app, tempo di apertura, a confronto con Cinema.
 
+Risultato del 1° novembre 2026: Native Tv compila con l'SDK `webos-d7ed7ee.6` su macOS arm64 e gira sulla 43UN70006LA con webOS 5.6.2. Installato con `deploy.sh --no-persist` (senza aggancio all'avvio) e con `allowNetworkDebugger: true` nel config della TV, così la porta 9998 di DevTools resta aperta alla rete. Il servizio occupa circa 8 MB di memoria residente, l'app nativa SDL2 e OpenGL ES circa 17,5 MB e si apre sulla configurazione iniziale; i processi delle app web di LG, con Cinema, Bloomee e YouTube aperti, ne occupano 35-56 MB ciascuno più quanto è finito nello swap (memchute li conta a 270-420 MB in tutto).
+
 ### 1. Strumenti TV di Cinema nel servizio C++
 
 Molti esistono già in Native Tv: privacy e accordi sui dati, debloat dei servizi, mappatura dei tasti, blocco degli aggiornamenti LG. Da portare o allineare a Cinema:
