@@ -139,7 +139,7 @@ add_library(nativetv_tv_services src/service/control_commands.cpp
   src/service/background_services.cpp src/service/saved_pages.cpp
   src/service/home_profiles.cpp src/service/home_channels.cpp
   src/service/home_status.cpp
-  src/service/home_guide.cpp src/service/home_wallpapers.cpp
+  src/service/home_guide.cpp src/service/home_wallpapers.cpp src/service/home_wallpaper_source.cpp src/service/usb_config.cpp
   src/service/home_catalogue.cpp src/service/home_recent_apps.cpp
   src/service/home_recent_history.cpp
   src/service/home_picture.cpp src/service/home_now.cpp
@@ -780,6 +780,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-jellyfin-link-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-jellyfin-link-tests PRIVATE -Wall -Wextra -Werror)
   add_test(NAME native-jellyfin-link COMMAND native-jellyfin-link-tests)
+  add_executable(native-wallpaper-source-tests tests/wallpaper_source.cpp)
+  target_link_libraries(native-wallpaper-source-tests PRIVATE nativetv_tv_services)
+  target_compile_options(native-wallpaper-source-tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+  add_test(NAME native-wallpaper-source COMMAND native-wallpaper-source-tests)
   add_executable(native-home-weather-tests tests/home_weather.cpp)
   target_link_libraries(native-home-weather-tests PRIVATE nativetv_tv_services)
   target_compile_options(native-home-weather-tests PRIVATE -Wall -Wextra -Werror)

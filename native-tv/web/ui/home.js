@@ -61,6 +61,36 @@ async function loadHome(afterSave) {
   if (!homeAvailable && activeTab === 'home') return showTab('control');
   renderHome();
   loadHomeKeys();
+  loadWallSource();
+}
+
+/* ---- Where the wallpaper comes from (Cinema's backgrounds) ---- */
+function wallSourceFill(d) {
+  q('wall-source').value = d.source;
+  q('wall-zoom').checked = !!d.zoom;
+  q('wall-interval').value = String(d.interval);
+  const gradient = q('wall-gradient');
+  if (gradient.options.length !== (d.gradients || []).length) {
+    gradient.textContent = '';
+    (d.gradients || []).forEach(g => gradient.add(new Option(g.title, g.id)));
+  }
+  gradient.value = d.gradient;
+  q('wall-gradient-row').hidden = d.source !== 'gradient';
+  q('wall-interval-row').hidden = d.source !== 'photos' && d.source !== 'usb';
+  q('wall-source-note').textContent = d.source === 'photos' && !d.pictures
+    ? t('wall.downloading', 'Downloading Cinema\'s photos…')
+    : d.source === 'usb' && !d.pictures ? t('wall.noUsb', 'No pictures in lounge/backgrounds on a USB stick.') : '';
+}
+
+async function loadWallSource() {
+  try { wallSourceFill(await homeGet('/api/home/wallpaper-source')); } catch (e) { /* older service */ }
+}
+
+async function wallSourceSave(change) {
+  try {
+    wallSourceFill(await homePost('/api/home/wallpaper-source', change));
+    if (change.source === 'photos') setTimeout(loadWallSource, 8000);
+  } catch (e) { q('wall-source-note').textContent = e.message; }
 }
 
 /* ---- Films and series (TMDB) and Trending on YouTube ----
@@ -168,6 +198,18 @@ function renderHome() {
     const twelve = !!st.layout && st.layout.clockFormat === '12h';
     updateToggle(clock, { cls: 'idle', label: twelve ? t('home.clock12', '12-hour') : t('home.clock24', '24-hour') });
     clock.disabled = !homeWritable();
+  }
+  const ambienceRow = q('home-ambience-row'), ambienceSel = q('home-ambience');
+  if (ambienceRow) ambienceRow.hidden = !st.supported.ok;
+  if (ambienceSel) {
+    ambienceSel.value = (st.layout && st.layout.ambience) || 'default';
+    ambienceSel.disabled = !homeWritable();
+  }
+  const focusRow = q('home-focus-row'), focusSel = q('home-focus');
+  if (focusRow) focusRow.hidden = !st.supported.ok;
+  if (focusSel) {
+    focusSel.value = (st.layout && st.layout.colours && st.layout.colours.accent) || '';
+    focusSel.disabled = !homeWritable();
   }
   [['home-show-inputs', 'showInputs', true], ['home-show-live', 'showLive', false], ['home-show-lg', 'showLgHome', true]].forEach(([id, key, fallback]) => {
     const row = q(id + '-row'), btn = q(id);
@@ -453,6 +495,10 @@ function homePicture() {
 
 function homeAppNames() {
   homeSaveLayout({ appNames: homeLayout.appNames === false });
+}
+
+function homeFocusColour(accent) {
+  homeSaveLayout({ colours: accent ? { text: '#ffffff', accent: accent } : null });
 }
 
 function homeClockFormat() {

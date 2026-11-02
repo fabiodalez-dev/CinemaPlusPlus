@@ -215,7 +215,7 @@ class ProfilesScreen final : public ScreenView {
                 disc.ring = {3, 0, kit::alpha::outlineStrong};
             if (look.ringAlpha > 0) {
                 disc.ring = {0, look.ringWidth,
-                             kit::focus::withAlpha(kit::elevation::focusRingColor, look.ringAlpha)};
+                             kit::focus::withAlpha(kit::focus::ringColor(), look.ringAlpha)};
                 disc.shadow = {0, look.shadowDy, look.shadowBlur, 0, {0, 0, 0, look.shadowAlpha}};
             }
             if (add)
@@ -263,7 +263,7 @@ class ProfilesScreen final : public ScreenView {
                 scene.pushTransform(kit::focus::transformAt(box, look.scale));
                 Node &dot = scene.shape(box, hexColour(kColours[i]), kSwatch / 2);
                 if (look.ringAlpha > 0)
-                    dot.ring = {0, look.ringWidth, kit::focus::withAlpha(kit::elevation::focusRingColor, look.ringAlpha)};
+                    dot.ring = {0, look.ringWidth, kit::focus::withAlpha(kit::focus::ringColor(), look.ringAlpha)};
                 if (current == kColours[i])
                     paint.glyphs.icon(scene, {box.x + 11, box.y + 11, 30, 30}, "check", kit::color::ink);
                 scene.popTransform();

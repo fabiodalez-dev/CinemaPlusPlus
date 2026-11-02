@@ -19,6 +19,18 @@ constexpr Color mix(Color from, Color to, float amount) {
 constexpr Color withAlpha(Color color, float alpha) {
     return {color.r, color.g, color.b, color.a * alpha};
 }
+// The focus ring's colour: the theme's, or the one chosen for Home (Cinema's focus colour,
+// layout.colours.accent).
+inline Color &ringColorSlot() {
+    static Color color = elevation::focusRingColor;
+    return color;
+}
+inline Color ringColor() {
+    return ringColorSlot();
+}
+inline void setRingColor(Color color) {
+    ringColorSlot() = color;
+}
 
 // Where the scale is anchored, as fractions of the rect.
 struct Pivot {

@@ -1596,6 +1596,37 @@
               </button>
             </div>
           </div>
+          <div class="prot-row" id="home-ambience-row" hidden>
+            <div class="prot-main">
+              <div class="prot-title" id="home-ambience-title" data-t="home.ambience">Ambience</div>
+              <div class="prot-desc" data-t="home.ambienceDesc">Cinema's profiles. Night darkens the wallpaper and plays the music at a quarter of its volume; Cinema turns the wallpaper to a midnight gradient and stops the music.</div>
+            </div>
+            <div class="prot-status">
+              <select id="home-ambience" aria-labelledby="home-ambience-title" onchange="homeSaveLayout({ ambience: this.value })">
+                <option value="default" data-t="home.ambience.default">Standard</option>
+                <option value="night" data-t="home.ambience.night">Night</option>
+                <option value="cinema" data-t="home.ambience.cinema">Cinema</option>
+              </select>
+            </div>
+          </div>
+          <div class="prot-row" id="home-focus-row" hidden>
+            <div class="prot-main">
+              <div class="prot-title" id="home-focus-title" data-t="home.focusColour">Focus colour</div>
+              <div class="prot-desc" data-t="home.focusColourDesc">The ring around what the remote has picked on the TV, as Cinema's focus colour.</div>
+            </div>
+            <div class="prot-status">
+              <select id="home-focus" aria-labelledby="home-focus-title" onchange="homeFocusColour(this.value)">
+                <option value="" data-t="home.focusDefault">White (default)</option>
+                <option value="#a8c7fa" data-t="home.colour.blue">Blue</option>
+                <option value="#7fcfff" data-t="home.colour.cyan">Cyan</option>
+                <option value="#6dd58c" data-t="home.colour.green">Green</option>
+                <option value="#ffd60a" data-t="home.colour.yellow">Yellow</option>
+                <option value="#ffb74d" data-t="home.colour.orange">Orange</option>
+                <option value="#f2b8b5" data-t="home.colour.red">Red</option>
+                <option value="#d0bcff" data-t="home.colour.violet">Violet</option>
+              </select>
+            </div>
+          </div>
           <div class="prot-row" id="home-show-inputs-row" hidden>
             <div class="prot-main">
               <div
@@ -1850,6 +1881,31 @@
 </article>
 <article class="card" style="--p:2;--t:4;--d:6">
 <div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-wallpaper"/></svg></span><h2 data-t="home.wall.title">Wallpaper</h2></div>
+<div class="setting-row">
+            <label for="wall-source" data-t="wall.source">Wallpaper from</label>
+            <select id="wall-source" class="pill-sel" onchange="wallSourceSave({ source: this.value })">
+              <option value="slots" data-t="wall.source.slots">The pictures below, by time of day</option>
+              <option value="gradient" data-t="wall.source.gradient">One of Cinema's gradients</option>
+              <option value="photos" data-t="wall.source.photos">Cinema's photos, in turn</option>
+              <option value="usb" data-t="wall.source.usb">USB stick, lounge/backgrounds folder</option>
+            </select>
+          </div>
+<div class="setting-row" id="wall-gradient-row" hidden>
+            <label for="wall-gradient" data-t="wall.gradient">Gradient</label>
+            <select id="wall-gradient" class="pill-sel" onchange="wallSourceSave({ gradient: this.value })"></select>
+          </div>
+<div class="setting-row" id="wall-interval-row" hidden>
+            <label for="wall-interval" data-t="wall.interval">Change picture every</label>
+            <select id="wall-interval" class="pill-sel" onchange="wallSourceSave({ interval: Number(this.value) })">
+              <option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option>
+              <option value="30">30 min</option><option value="60">60 min</option><option value="1440">24 h</option>
+            </select>
+          </div>
+<div class="setting-row">
+            <label for="wall-zoom" data-t="wall.zoom">Slow zoom</label>
+            <input type="checkbox" id="wall-zoom" onchange="wallSourceSave({ zoom: this.checked })">
+          </div>
+<div class="sub" id="wall-source-note" role="status"></div>
 <div class="sub" data-t="home.wall.optional">
             Optional: upload an image for each time of day. A time of day
             without one has a black background.
@@ -2012,7 +2068,7 @@
       <section class="panel grid" id="musicpane" role="tabpanel" hidden>
         <div class="card" style="--p:2;--t:4;--d:12">
           <h2 data-t="music.title">Music on Home</h2>
-          <p class="sub" data-t="music.desc">Quiet music while Home is on screen, as on Cinema: it fades in, stops when an app, live TV or an input opens, and comes back with Home. On the remote, Green plays the next track and Yellow pauses.</p>
+          <p class="sub" data-t="music.desc">Quiet music while Home is on screen, as on Cinema: it fades in, stops when an app, live TV or an input opens, and comes back with Home. On the remote, Green plays the next track and Red pauses./p>
           <div class="setting-row">
             <label for="music-enabled" data-t="music.enabled">Play music on Home</label>
             <input type="checkbox" id="music-enabled" onchange="musicSave({ enabled: this.checked })">

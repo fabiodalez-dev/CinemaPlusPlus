@@ -1,3 +1,4 @@
+#include <cmath>
 // Home and Apps drawn on the kit from the controller's state and the motion engine's values.
 #include "domain/say.hpp"
 #include "ui/application.hpp"
@@ -88,8 +89,43 @@ std::string initialOf(const ViewState &state) {
     return name.substr(0, end);
 }
 
-void wallpaper(Scene &scene, const HomeState &home) {
-    const Rect stage = {0, 0, kit::canvas::width, kit::canvas::height};
+// Cinema's gradient presets (background.js), drawn instead of a picture.
+void gradientWall(Scene &scene, const std::string &id) {
+    Node &wall = scene.shape({0, 0, kit::canvas::width, kit::canvas::height}, kit::color::ink);
+    wall.gradient.stops = 3;
+    struct Preset {
+        const char *id;
+        float angle;
+        unsigned colours[3];
+        float at[3];
+    };
+    static const Preset presets[] = {{"midnight", 180, {0x050508, 0x12121a, 0x1c1c28}, {0, .6f, 1}},
+                                     {"cool-gradient", 145, {0x0b1220, 0x162447, 0x1f4068}, {0, .5f, 1}},
+                                     {"warm-gradient", 135, {0x1a1028, 0x3d1f2e, 0x7a3b2e}, {0, .4f, 1}},
+                                     {"ember", 160, {0x4a1942, 0x1a0a14, 0x080408}, {0, .5f, 1}}};
+    const Preset *preset = &presets[0];
+    for (const Preset &candidate : presets)
+        if (id == candidate.id)
+            preset = &candidate;
+    wall.gradient.angle = preset->angle;
+    for (int i = 0; i < 3; ++i) {
+        wall.gradient.color[i] = kit::rgb(preset->colours[i]);
+        wall.gradient.at[i] = preset->at[i];
+    }
+}
+
+void wallpaper(Scene &scene, const HomeState &home, const Json &wallpapers, double nowMs) {
+    if (wallpapers["source"].string() == "gradient") {
+        gradientWall(scene, wallpapers["gradient"].string());
+        return;
+    }
+    Rect stage = {0, 0, kit::canvas::width, kit::canvas::height};
+    // Cinema's slow zoom: up to 6% larger and back, over a minute.
+    if (wallpapers["zoom"].boolean()) {
+        const double phase = std::fmod(nowMs, 60000.0) / 60000.0;
+        const float grow = static_cast<float>(.03 * (1 - std::cos(phase * 2 * 3.14159265358979)));
+        stage = {-stage.w * grow / 2, -stage.h * grow / 2, stage.w * (1 + grow), stage.h * (1 + grow)};
+    }
     if (home.wallpaperTransition) {
         if (!home.wallpaperFrom.empty())
             scene.image(stage, home.wallpaperFrom, 0, false,
@@ -432,6 +468,23 @@ void veil(Scene &scene, float y, float h, float from, float to) {
     band.gradient.at[1] = 1;
 }
 
+// Cinema's ambience over the wallpaper and the hero's picture: Night dims them (Cinema's 0.6
+// scrim), Cinema turns them to its midnight gradient.
+void ambienceVeil(Scene &scene, const ViewState &state) {
+    const std::string ambience = state.catalogue["layout"]["ambience"].string();
+    if (ambience == "night") {
+        scene.shape({0, 0, kit::canvas::width, kit::canvas::height}, kit::focus::withAlpha(kit::color::ink, .6f));
+    } else if (ambience == "cinema") {
+        Node &midnight = scene.shape({0, 0, kit::canvas::width, kit::canvas::height}, kit::color::ink);
+        midnight.gradient.angle = 160;
+        midnight.gradient.stops = 2;
+        midnight.gradient.color[0] = kit::rgb(0x101a3a, .94f);
+        midnight.gradient.at[0] = 0;
+        midnight.gradient.color[1] = kit::rgb(0x05060c, .97f);
+        midnight.gradient.at[1] = 1;
+    }
+}
+
 // The Live tab over the broadcast: the channel banner always, the bar and the channels while
 // the controls show. Leaves an opacity pushed when the controls are fading (drawHome pops it).
 void drawLive(kit::Paint paint, const Frame &frame) {
@@ -499,13 +552,14 @@ void drawHome(kit::Paint paint, const Frame &frame) {
             scene.popOpacity();
         return;
     }
-    wallpaper(scene, home);
+    wallpaper(scene, home, state.catalogue["wallpapers"], frame.nowMs);
     float wall = static_cast<float>(motion.value("wall"));
     kit::ambientWall(paint, 1 - wall, home.art.wallTint);
     if (apps) {
         kit::Hero none = heroOf(frame);
         none.wallAlpha = wall;
         kit::heroWall(paint, none);
+        ambienceVeil(scene, state);
         if (home.grid)
             grid(paint, frame);
         else
@@ -513,6 +567,7 @@ void drawHome(kit::Paint paint, const Frame &frame) {
     } else {
         kit::Hero hero = heroOf(frame);
         kit::heroWall(paint, hero);
+        ambienceVeil(scene, state);
         kit::heroText(paint, hero);
         if (home.spotlight.size() > 1) {
             kit::Pagination dots;

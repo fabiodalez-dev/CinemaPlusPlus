@@ -693,6 +693,15 @@
       "notes": "Cinema++'s own updates from its GitHub releases: the manifest names the version and the package's SHA-256; install downloads, checks, unpacks and runs the package's install script detached."
     },
     {
+      "paths": ["/api/home/wallpaper-source"],
+      "methods": ["GET", "POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; POST requires allowControl unless from TV loopback",
+      "bodyLimit": {"max": 512, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Where Home's wallpaper comes from, as Cinema's backgrounds: the four uploads by time of day, a gradient, Cinema's photos (downloaded once from its repository) or a USB stick's lounge/backgrounds, with a change interval and the slow zoom."
+    },
+    {
       "paths": ["/api/cinemapp/apps"],
       "methods": ["GET"],
       "auth": "token",

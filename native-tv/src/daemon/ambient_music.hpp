@@ -37,8 +37,9 @@ class AmbientMusic {
 
     // {"enabled", "source": "builtin"|"usb", "volume" 0-100, "shuffle", "tracks": [ids]}.
     bool configure(const Json &change, std::string &error);
-    // Home in front (true) or not: music starts or fades out.
-    void home(bool shown);
+    // Home in front (true) or not: music starts or fades out. `quiet`: Cinema's Night, at a
+    // quarter of the volume.
+    void home(bool shown, bool quiet = false);
     void next();
     void toggle();
     // Settings, the tracks there are, and what plays.
@@ -71,7 +72,7 @@ class AmbientMusic {
     bool busy_ = false, stopping_ = false;
     std::thread worker_;
     Json settings_;
-    bool shown_ = false, paused_ = false;
+    bool shown_ = false, paused_ = false, quiet_ = false;
     std::string mediaId_;
     Json current_;
     size_t position_ = 0;

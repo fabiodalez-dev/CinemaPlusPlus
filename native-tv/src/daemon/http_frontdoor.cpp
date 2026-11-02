@@ -79,6 +79,8 @@
 #include "service/home_guide.hpp"
 #include "service/home_now.hpp"
 #include "service/home_wallpapers.hpp"
+#include "service/home_wallpaper_source.hpp"
+#include "service/usb_config.hpp"
 #include "service/home_recent_apps.hpp"
 #include "service/home_recent_history.hpp"
 #include "service/home_profiles.hpp"
@@ -11085,6 +11087,66 @@ void HttpFrontDoor::handleCinemaUpdate(HttpExchange &exchange) const {
     respond(200, status);
 }
 
+// Where Home's wallpaper comes from (Cinema's backgrounds): GET the settings with Cinema's gradients
+// and photos; POST a change. Choosing Cinema's photos downloads the missing ones in the background.
+void HttpFrontDoor::handleWallpaperSource(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    Json failure = Json::object();
+    failure.set("ok", Json::flag(false));
+    if (request.method == "POST") {
+        if (!config_.allowControl && !isLoopbackPeer(request.remoteAddress)) {
+            sendSetupError(exchange, 403, say::msg("srv.controlsOff", "controls disabled in config"));
+            return;
+        }
+        if (rejectCrossSitePost(exchange))
+            return;
+        if (!exchange.setBodyLimit(512)) {
+            sendSetupError(exchange, 413, "request body too large", true);
+            return;
+        }
+        std::string body;
+        char buffer[512];
+        for (;;) {
+            const int count = exchange.readBody(buffer, sizeof(buffer));
+            if (count == 0)
+                break;
+            if (count < 0) {
+                sendSetupError(exchange, 400, "invalid request body", true);
+                return;
+            }
+            body.append(buffer, static_cast<size_t>(count));
+        }
+        std::string error;
+        if (!service::saveWallpaperSource(dataRoot_, Json::parse(body), error)) {
+            failure.set("error", Json::text(error));
+            respond(400, failure);
+            return;
+        }
+        if (service::readWallpaperSource(dataRoot_)["source"].string() == "photos") {
+            const std::string root = dataRoot_;
+            std::thread([root]() { (void)service::fetchCinemaPhotos(root); }).detach();
+        }
+    } else if (request.method != "GET") {
+        failure.set("error", Json::text("method not allowed"));
+        respond(405, failure);
+        return;
+    }
+    Json result = service::readWallpaperSource(dataRoot_);
+    result.set("ok", Json::flag(true));
+    result.set("gradients", service::wallpaperGradients());
+    result.set("photos", service::wallpaperPhotos());
+    result.set("pictures", Json::numeric(static_cast<double>(
+                               service::wallpaperRotation(dataRoot_, result).size())));
+    respond(200, result);
+}
+
 // Cinema++ as the first app at power-on (lifecycle/cinemapp-first-app): GET says whether it is
 // on, POST {"enabled"} turns it on, taking over from Cinema web, or off, giving Cinema web back.
 void HttpFrontDoor::handleCinemaFirstApp(HttpExchange &exchange) const {
@@ -11208,7 +11270,7 @@ void HttpFrontDoor::handleMusic(HttpExchange &exchange) const {
     const Json payload = Json::parse(body);
     const std::string action = payload["action"].string();
     if (action == "home")
-        ambientMusic_.home(payload["shown"].boolean());
+        ambientMusic_.home(payload["shown"].boolean(), payload["quiet"].boolean());
     else if (action == "next")
         ambientMusic_.next();
     else if (action == "toggle")
@@ -16596,7 +16658,55 @@ void HttpFrontDoor::sendHomeStatus(HttpExchange &exchange) const {
                            response.dump());
 }
 
+// Cinema's lounge/config.json on a USB stick, applied once per content of the file: the TV asks
+// for the catalogue every few seconds, so a stick put in is seen at once; looked at every 20 s.
+void HttpFrontDoor::applyUsbConfig() const {
+    static std::mutex mutex;
+    static std::chrono::steady_clock::time_point lookedAt;
+    std::unique_lock<std::mutex> lock(mutex, std::try_to_lock);
+    if (!lock.owns_lock())
+        return;
+    const auto now = std::chrono::steady_clock::now();
+    if (lookedAt.time_since_epoch().count() && now - lookedAt < std::chrono::seconds(20))
+        return;
+    lookedAt = now;
+    std::string fingerprint;
+    const Json config = service::findUsbConfig(rootedSystemPath(systemRoot_, "/tmp/usb"), fingerprint);
+    if (!config.isObject())
+        return;
+    const std::string appliedPath = dataFilePath(dataRoot_, "usb-config.applied");
+    std::ifstream appliedFile(appliedPath.c_str());
+    std::string applied;
+    std::getline(appliedFile, applied);
+    if (applied == fingerprint)
+        return;
+    const service::UsbConfigChanges changes = service::usbConfigChanges(config);
+    std::string error;
+    if (changes.layout.size()) {
+        std::lock_guard<std::mutex> homeLock(homeConfigMutex_);
+        JsonFile file(dataFilePath(dataRoot_, "home.json"), 8 * 1024 * 1024);
+        const JsonFileResult stored = file.load();
+        const Json current = service::normalizeHomeDocument(stored.found ? stored.value : Json::object());
+        const service::HomeDocumentUpdate update = service::updateHomeLayout(current, changes.layout);
+        if (update.response["ok"].boolean())
+            (void)file.save(update.document, &error);
+    }
+    if (changes.wallpaper.size() && service::saveWallpaperSource(dataRoot_, changes.wallpaper, error) &&
+        service::readWallpaperSource(dataRoot_)["source"].string() == "photos") {
+        const std::string root = dataRoot_;
+        std::thread([root]() { (void)service::fetchCinemaPhotos(root); }).detach();
+    }
+    if (changes.music.size())
+        (void)ambientMusic_.configure(changes.music, error);
+    if (changes.weather.size())
+        (void)homeWeather_.configure(changes.weather, error);
+    std::ofstream out(appliedPath.c_str(), std::ios::trunc);
+    out << fingerprint << "\n";
+    if (logger_) logger_->info("USB lounge/config.json applied");
+}
+
 void HttpFrontDoor::sendHomeCatalogue(HttpExchange &exchange, bool view) const {
+    applyUsbConfig();
     const Json response = homeCatalogueResponse(view);
     (void)exchange.respond(200,
                            {{"Content-Type", "application/json; charset=utf-8"},
@@ -17271,6 +17381,22 @@ void HttpFrontDoor::sendHomeWallpaper(HttpExchange &exchange) const {
     if (!uniqueQueryParameter(request.query, "slot", slot)) {
         (void)exchange.respond(404, {{"Content-Type", "application/json"}},
                               "{\"ok\":false,\"error\":\"no wallpaper uploaded\"}");
+        return;
+    }
+    // Cinema's photos and a USB stick's pictures, by their place in the rotation.
+    const std::string rotated = service::wallpaperRotationFile(dataRoot_, slot);
+    if (!rotated.empty()) {
+        std::ifstream file(rotated.c_str(), std::ios::binary);
+        std::stringstream bytes;
+        bytes << file.rdbuf();
+        const std::string body = bytes.str();
+        std::string lower = rotated;
+        std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
+        const bool png = lower.size() > 4 && lower.compare(lower.size() - 4, 4, ".png") == 0;
+        (void)exchange.respond(body.empty() ? 404 : 200,
+                               {{"Content-Type", png ? "image/png" : "image/jpeg"},
+                                {"Cache-Control", "public, max-age=3600"}},
+                               body);
         return;
     }
     const service::HomeWallpaperFile wallpaper =
@@ -18757,6 +18883,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/wallpaper" && request.method == "GET") {
         sendHomeWallpaper(exchange);
+        return;
+    }
+    if (request.uri == "/api/home/wallpaper-source") {
+        handleWallpaperSource(exchange);
         return;
     }
     if (request.uri == "/api/home/wallpapers" && request.method == "POST") {

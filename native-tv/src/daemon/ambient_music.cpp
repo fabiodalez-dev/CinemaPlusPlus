@@ -194,6 +194,7 @@ void AmbientMusic::playIndex(size_t index) {
         std::lock_guard<std::mutex> lock(mutex_);
         list = playlist();
         volume = static_cast<int>(settings_["volume"].number(35));
+        if (quiet_) volume = (volume + 3) / 4;
     }
     if (list.empty()) return;
     if (!mediaId_.empty()) stop(false);
@@ -281,9 +282,10 @@ void AmbientMusic::start() {
     playIndex(first);
 }
 
-void AmbientMusic::home(bool shown) {
+void AmbientMusic::home(bool shown, bool quiet) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        quiet_ = quiet;
         if (shown == shown_) return;
         shown_ = shown;
     }

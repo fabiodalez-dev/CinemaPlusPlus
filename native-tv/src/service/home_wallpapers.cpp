@@ -1,4 +1,5 @@
 #include "service/home_wallpapers.hpp"
+#include "service/home_wallpaper_source.hpp"
 #include "domain/say.hpp"
 #include "core/json.hpp"
 #include <cerrno>
@@ -165,6 +166,8 @@ Json homeWallpaperStatus(const std::string &dataRoot) {
     result.set("uploading", Json::flag(uploading));
     result.set("slots", availableSlots);
     result.set("revision", Json::text(revision));
+    // Cinema++: where the wallpaper comes from (the slots above, a gradient, photos, USB).
+    addWallpaperSource(result, dataRoot);
     return result;
 }
 

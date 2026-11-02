@@ -1,3 +1,5 @@
+#include "ui/kit/focus.hpp"
+#include <cstdlib>
 #include "ui/kit/tuning.hpp"
 #include "domain/say.hpp"
 #include "domain/say_translation.hpp"
@@ -7,6 +9,13 @@
 
 namespace nativetv {
 void Application::rebuildHome() {
+    // The focus colour chosen for Home (Cinema's), else the theme's.
+    std::string accent = state_.catalogue["layout"]["colours"]["accent"].string();
+    if (!accent.empty() && accent[0] == '#')
+        accent.erase(0, 1);
+    kit::focus::setRingColor(accent.size() == 6 && accent.find_first_not_of("0123456789abcdefABCDEF") == std::string::npos
+                                 ? kit::rgb(static_cast<unsigned>(std::strtoul(accent.c_str(), nullptr, 16)))
+                                 : kit::elevation::focusRingColor);
     // The cards being moved are the person's own order until it is saved.
     if (state_.home.editing)
         return;

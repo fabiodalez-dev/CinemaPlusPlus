@@ -53,7 +53,7 @@ void pillButton(Paint paint, const PillButton &button) {
                              button.rest.h / 2);
     if (look.ringAlpha > 0) {
         base.ring = {0, look.ringWidth,
-                     focus::withAlpha(elevation::focusRingColor, look.ringAlpha * .6f)};
+                     focus::withAlpha(focus::ringColor(), look.ringAlpha * .6f)};
         base.shadow = {0, look.shadowDy, look.shadowBlur, 0, {0, 0, 0, look.shadowAlpha}};
     }
     Color ink = focus::inkAt(button.primary ? color::onAccent : color::onSurface, color::onFocus,

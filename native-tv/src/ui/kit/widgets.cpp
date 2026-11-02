@@ -68,7 +68,7 @@ void packed(Scene &scene, Rect area, Color fill) {
 void applyFocus(Node &node, const focus::Look &look) {
     if (look.ringAlpha <= 0)
         return;
-    node.ring = {0, look.ringWidth, faded(elevation::focusRingColor, look.ringAlpha)};
+    node.ring = {0, look.ringWidth, faded(focus::ringColor(), look.ringAlpha)};
     node.shadow = {0, look.shadowDy, look.shadowBlur, 0, {0, 0, 0, look.shadowAlpha}};
 }
 // For a node that already carries its resting outline: the ring goes on a clear overlay, so the
@@ -77,7 +77,7 @@ void focusRing(Scene &scene, Rect area, float rounding, float amount) {
     if (amount <= 0)
         return;
     Node &overlay = scene.shape(area, clear, rounding);
-    overlay.ring = {0, elevation::focusRingWidth, faded(elevation::focusRingColor, amount)};
+    overlay.ring = {0, elevation::focusRingWidth, faded(focus::ringColor(), amount)};
 }
 void restOutline(Node &node) {
     node.ring = {1, 0, alpha::outline};

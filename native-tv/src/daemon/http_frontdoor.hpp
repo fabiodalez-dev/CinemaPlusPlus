@@ -391,6 +391,8 @@ class HttpFrontDoor {
     void handleMusic(HttpExchange &exchange) const;
     void handleCinemaUpdate(HttpExchange &exchange) const;
     void handleCinemaFirstApp(HttpExchange &exchange) const;
+    void handleWallpaperSource(HttpExchange &exchange) const;
+    void applyUsbConfig() const;
     std::string jellyfinClient() const;
     void addJellyfinClients(Json &response) const;
     void sendCinemaDiagnostics(HttpExchange &exchange) const;

@@ -249,15 +249,36 @@ bool Application::liveKey(Key key) {
 // screen or app); the service fades it in and out.
 void Application::musicSync() {
     // Not before the server has said whether first-run setup is done: setup comes first.
+    // Cinema's ambience: no music in Cinema, a quarter of the volume at Night.
+    const std::string ambience = state_.catalogue["layout"]["ambience"].string();
     const bool shown = active_ && capsAnswered_ && state_.screen == Screen::Home && !screen_ &&
-                       !state_.live.open && !coveredForCaps();
-    if (shown == musicShown_)
+                       !state_.live.open && !coveredForCaps() && ambience != "cinema";
+    const bool quiet = ambience == "night";
+    if (shown == musicShown_ && quiet == musicQuiet_)
         return;
     musicShown_ = shown;
+    musicQuiet_ = quiet;
     Json body = Json::object();
     body.set("action", Json::text("home"));
     body.set("shown", Json::flag(shown));
+    body.set("quiet", Json::flag(quiet));
     (void)services_.write("music", Operation::Music, body);
+}
+
+// Yellow on Home, as on Cinema: Cinema's view or the essential one, the apps and the inputs.
+void Application::essentialKey() {
+    if (state_.screen != Screen::Home || screen_ || state_.live.open)
+        return;
+    const bool on = !state_.catalogue["layout"]["essential"].boolean();
+    Json layout = state_.catalogue["layout"];
+    if (!layout.isObject())
+        layout = Json::object();
+    layout.set("essential", Json::flag(on));
+    state_.catalogue.set("layout", layout);
+    rebuildHome();
+    execute(post(Operation::SetHomeLayout, fields({{"essential", Json::flag(on)}})));
+    toast(on ? say::msg("tv.home.essentialOn", "Essential view · Yellow for Cinema")
+             : say::msg("tv.home.essentialOff", "Cinema view"));
 }
 
 void Application::musicKey(bool next) {

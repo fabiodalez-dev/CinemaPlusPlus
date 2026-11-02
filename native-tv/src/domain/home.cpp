@@ -348,6 +348,15 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         if (!inputs.cards.empty())
             result.push_back(inputs);
     }
+    // Cinema's essential view: the apps and the inputs, nothing from the library or the feed.
+    if (catalogue["layout"]["essential"].boolean()) {
+        if (!catalogue["layout"]["dockInputs"].boolean()) {
+            CardRow inputs = catalogueRow("dev", catalogue, guide);
+            if (!inputs.cards.empty())
+                result.push_back(inputs);
+        }
+        return result;
+    }
     // The Jellyfin library first, as on Cinema: Continue watching leads.
     const std::map<std::string, std::string> library = {
         {"jf-continue", say::msg("tv.home.row.jfContinue", "Continue watching")},

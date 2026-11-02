@@ -92,7 +92,9 @@ void Application::key(Key key) {
                         execute(post(Operation::OpenHomeItem, fields({{"kind", Json::text("netflix")},
                                                                       {"type", card.data["type"]},
                                                                       {"id", card.data["id"]}})));
-                } else
+                } else if (key == Key::Red && !state_.live.open)
+                    musicKey(false); // Red pauses and plays the music, as on Cinema
+                else
                     execute(card.command);
             }
         }

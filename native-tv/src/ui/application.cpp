@@ -14,7 +14,7 @@ struct WallpaperChoice {
     std::string asset;
     float opacity = 0;
 };
-WallpaperChoice wallpaperAt(const Json &catalogue, int hour) {
+WallpaperChoice wallpaperAt(const Json &catalogue, int hour, int minute = 0) {
     static const struct {
         const char *slot;
         int from;
@@ -23,6 +23,21 @@ WallpaperChoice wallpaperAt(const Json &catalogue, int hour) {
                  {"evening", 17, .72f}, {"night", 21, .65f}};
     WallpaperChoice choice;
     Json wallpapers = catalogue["wallpapers"];
+    // Cinema's sources: a gradient is drawn, photos and USB pictures take turns by the clock.
+    const std::string source = wallpapers["source"].string();
+    if (source == "gradient")
+        return choice;
+    if (source == "photos" || source == "usb") {
+        const Json rotation = wallpapers["rotation"];
+        if (!rotation.size())
+            return choice;
+        const int interval = std::max(1, static_cast<int>(wallpapers["interval"].number(10)));
+        const int minutes = (hour < 0 ? 0 : hour % 24) * 60 + (minute < 0 ? 0 : minute);
+        choice.asset = "wallpaper:" + rotation[static_cast<size_t>(minutes / interval) % rotation.size()].string() +
+                       "@" + wallpapers["rotationRevision"].string();
+        choice.opacity = .7f;
+        return choice;
+    }
     if (!wallpapers["available"].boolean())
         return choice;
     int currentHour = hour < 0 ? 0 : hour % 24;
@@ -152,6 +167,12 @@ bool Application::update(uint32_t now) {
     if (!pending.empty() && pictures_ &&
         pictures_->view(pending, 1600, 900, ImageFit::Cover, now_).texture != 0)
         imageReady(pending);
+    // Cinema's slow zoom: the wallpaper grows and shrinks over a minute, drawn at 15 frames a second.
+    if (state_.screen == Screen::Home && !screen_ && !state_.live.open &&
+        state_.catalogue["wallpapers"]["zoom"].boolean() && now_ - zoomFrameAt_ >= 66) {
+        zoomFrameAt_ = now_;
+        dirty_ = true;
+    }
     bool draw = dirty_ || moved || state_.home.wallpaperTransition || screenBusy;
     ambientOnly_ = moved && motion_.ambientOnly() && !dirty_ && !state_.home.wallpaperTransition &&
                    !screenBusy;
@@ -196,7 +217,7 @@ void Application::attach(kit::Glyphs &glyphs, Pictures &pictures) {
 void Application::syncWallpaper() {
     if (!active_ || !state_.catalogue.valid())
         return;
-    WallpaperChoice choice = wallpaperAt(state_.catalogue, state_.hour);
+    WallpaperChoice choice = wallpaperAt(state_.catalogue, state_.hour, state_.minute);
     auto &home = state_.home;
     if (home.wallpaperTarget == choice.asset &&
         std::fabs(home.wallpaperTargetOpacity - choice.opacity) < .001f)

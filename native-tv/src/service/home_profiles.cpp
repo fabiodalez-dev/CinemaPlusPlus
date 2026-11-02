@@ -14,7 +14,7 @@ const char *kColors[] = {"#a8c7fa", "#f2b8b5", "#6dd58c", "#ffb74d",
                          "#7fcfff", "#d0bcff"};
 const char *kLayoutKeys[] = {"rows", "order", "sort", "hidden", "kinds", "channels",
                              "picture", "appNames", "clockFormat", "showInputs",
-                             "showLgHome", "showLive", "colours", "dockInputs", "showDate", "appShortcuts"};
+                             "showLgHome", "showLive", "colours", "dockInputs", "showDate", "appShortcuts", "essential", "ambience"};
 const char *kPromoApps[] = {"com.webos.app.lgchannels",
                             "com.webos.app.sportsteamsettings",
                             "com.webos.app.lifeonscreen", "amazon.alexa.view",
@@ -174,6 +174,10 @@ Json defaultDocument() {
     document.set("dockInputs", Json::flag(false));
     document.set("showDate", Json::flag(true));
     document.set("appShortcuts", Json::flag(false));
+    // Cinema's essential view (the Yellow key): only the apps and the inputs on Per te.
+    document.set("essential", Json::flag(false));
+    // Cinema's ambience profiles: "default", "night" (darker, quieter) or "cinema" (midnight, no music).
+    document.set("ambience", Json::text("default"));
     document.set("openOnPowerOn", Json::flag(false));
     document.set("colours", Json::parse("null"));
     document.set("profiles", Json::array());
@@ -356,6 +360,9 @@ Json normalizeHomeDocument(const Json &raw) {
     result.set("dockInputs", Json::flag(raw["dockInputs"].boolean()));
     result.set("showDate", Json::flag(raw["showDate"].boolean(true)));
     result.set("appShortcuts", Json::flag(raw["appShortcuts"].boolean()));
+    result.set("essential", Json::flag(raw["essential"].boolean()));
+    const std::string ambience = raw["ambience"].string();
+    result.set("ambience", Json::text(ambience == "night" || ambience == "cinema" ? ambience : "default"));
     result.set("openOnPowerOn", Json::flag(raw["openOnPowerOn"].boolean()));
     result.set("colours", validColours(raw["colours"]));
 
@@ -466,9 +473,12 @@ HomeDocumentUpdate updateHomeLayout(const Json &input, const Json &body) {
     const Json availableChannels = body.has("channels") ? body["channels"] : current["channels"];
     proposed.set("channels", strings(ordered(stringList(channelOrder),
         stringList(availableChannels, kMaximumChannels))));
-    const char *booleanKeys[] = {"picture", "appNames", "showInputs", "showLgHome", "showLive", "dockInputs", "showDate", "appShortcuts"};
+    const char *booleanKeys[] = {"picture", "appNames", "showInputs", "showLgHome", "showLive", "dockInputs", "showDate", "appShortcuts", "essential"};
     for (const char *key : booleanKeys)
         proposed.set(key, body[key].isBoolean() ? body[key] : current[key]);
+    const std::string ambience = body["ambience"].string();
+    proposed.set("ambience", ambience == "default" || ambience == "night" || ambience == "cinema"
+                                 ? Json::text(ambience) : current["ambience"]);
     proposed.set("clockFormat", Json::text(body["clockFormat"].string() == "12h" ||
         body["clockFormat"].string() == "24h" ? body["clockFormat"].string()
                                                : current["clockFormat"].string()));

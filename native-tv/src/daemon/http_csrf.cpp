@@ -65,6 +65,7 @@ const GuardedRoute kGuardedRoutes[] = {
     {"/api/music", ContentTypeRule::JsonPrefix},
     {"/api/cinemapp/update", ContentTypeRule::JsonPrefix},
     {"/api/cinemapp/first-app", ContentTypeRule::JsonPrefix},
+    {"/api/home/wallpaper-source", ContentTypeRule::JsonPrefix},
     {"/api/home/jellyfin/refresh", ContentTypeRule::JsonPrefix},
     {"/api/memory/toggle", ContentTypeRule::JsonPrefix},
     {"/api/ledstrip", ContentTypeRule::JsonPrefix},
