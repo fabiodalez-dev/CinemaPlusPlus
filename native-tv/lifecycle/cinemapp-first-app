@@ -34,8 +34,18 @@ CINEMA_HOOK="$INITD/50-launch-home-boot"
 CINEMA_ROOT=/var/lib/launch-home-cinema
 CINEMA_CONF="$CINEMA_ROOT/tvtools.json"
 CINEMA_APP=/media/developer/apps/usr/palm/applications/$CINEMA_ID
-LOG=/tmp/cinemapp-first-app.log
-PIDFILE=/tmp/cinemapp-first-app.pid
+# Root-only, in RAM: not /tmp, where anyone could plant the pid file or a link for the log.
+RUN=/run/cinemapp-first-app
+LOG=$RUN/log
+PIDFILE=$RUN/pid
+mkdir -m 700 "$RUN" 2>/dev/null
+[ -d "$RUN" ] && [ ! -L "$RUN" ] && [ "$(stat -c %u "$RUN" 2>/dev/null)" = 0 ] || LOG=/dev/null
+
+# True when pid $1 runs a script whose command line has $2 in it: a pid read from a file is
+# checked before it is signalled.
+runs() {
+  [ -n "$1" ] && [ -r "/proc/$1/cmdline" ] && tr '\0' ' ' <"/proc/$1/cmdline" | grep -q "$2"
+}
 
 log() {
   echo "$(date '+%H:%M:%S' 2>/dev/null) $*" >>"$LOG" 2>/dev/null || true
@@ -72,7 +82,7 @@ cinema_aside() {
     mv -f "$CINEMA_HOOK" "$KEPT/50-launch-home-boot" && log "Cinema web's boot hook kept aside"
   fi
   pid=$(cat /tmp/launch-home-boot.pid 2>/dev/null)
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+  if runs "$pid" boot-launch.sh; then
     kill -TERM "$pid" 2>/dev/null
     log "Cinema web's wake watcher stopped"
   fi
@@ -257,7 +267,7 @@ keep_up() {
 
 boot() {
   [ -f "$ON" ] || exit 0
-  if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+  if runs "$(cat "$PIDFILE" 2>/dev/null)" cinemapp-first-app; then
     exit 0
   fi
   echo $$ >"$PIDFILE"
@@ -293,7 +303,7 @@ case "$1" in
   --disable)
     rm -f "$ON"
     pid=$(cat "$PIDFILE" 2>/dev/null)
-    [ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null
+    runs "$pid" cinemapp-first-app && kill -TERM "$pid" 2>/dev/null
     unpin
     cinema_back
     echo disabled
