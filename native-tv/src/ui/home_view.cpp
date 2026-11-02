@@ -297,6 +297,12 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0, float fadeTop = -
                     tile.sub.clear();
                 tile.icon = device ? "hdmi" : "tv";
                 tile.unused = unused;
+                // What plays behind the page: a dot, and "On air" under a channel's name.
+                const bool playing = state.live.open && (device ? state.live.source == "hdmi:" + portText(card.data["port"])
+                                                                : card.id == state.live.channelId);
+                tile.live = playing;
+                if (playing && !device)
+                    tile.sub = say::msg("tv.live.onAir", "On air") + (tile.sub.empty() ? "" : " · " + tile.sub);
                 tile.focus = focus;
                 tile.enter = enter;
                 kit::inputTile(paint, tile);

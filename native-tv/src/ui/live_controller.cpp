@@ -156,6 +156,7 @@ void Application::liveTune(const std::string &channelId, bool now) {
     if (channelId.empty())
         return;
     live.targetId = channelId;
+    liveFocusOn(channelId);
     live.banner = true;
     liveBannerUntil_ = now_ + kBannerMs;
     motion_.tween("liveban", 1, kit::motion::ms::fast, kit::easing(kit::motion::ease::out));
@@ -170,6 +171,25 @@ void Application::liveTune(const std::string &channelId, bool now) {
     body.set("action", Json::text("tune"));
     body.set("channelId", Json::text(channelId));
     (void)services_.write("live", Operation::Live, body);
+}
+
+// The card of what plays takes the focus on the Live or Inputs tab, so the page shows which
+// channel is on: when the picture opens, on every zap and on a typed number.
+void Application::liveFocusOn(const std::string &id) {
+    auto &home = state_.home;
+    if (id.empty() || !liveTab())
+        return;
+    for (size_t r = 0; r < home.rows.size(); ++r)
+        for (size_t c = 0; c < home.rows[r].cards.size(); ++c)
+            if ((home.rows[r].key == "ch" || home.rows[r].key == "dev") && home.rows[r].cards[c].id == id) {
+                if (home.row == r && home.column == c)
+                    return;
+                home.row = r;
+                home.column = c;
+                homeFocus(false);
+                dirty_ = true;
+                return;
+            }
 }
 
 void Application::liveZap(int step) {

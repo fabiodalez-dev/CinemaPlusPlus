@@ -69,8 +69,13 @@ void Application::response(const Response &response) {
         if (response.ok() && data["ok"].boolean()) {
             if (live.source == "tv")
                 live.status.clear();
-            if (data["channelId"].isString() && !data["channelId"].string().empty())
+            if (data["channelId"].isString() && !data["channelId"].string().empty() &&
+                data["channelId"].string() != live.channelId) {
                 live.channelId = data["channelId"].string();
+                // The channel LG was on when the picture opened: its card takes the focus.
+                if (live.targetId.empty() || live.targetId == live.channelId)
+                    liveFocusOn(live.channelId);
+            }
             if (live.targetId.empty()) {
                 live.targetId = live.channelId;
                 live.banner = true;

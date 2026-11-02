@@ -152,6 +152,7 @@ class Application : private ScreenHost {
     void liveClose();
     bool liveKey(Key key);
     void liveZap(int step);
+    void liveFocusOn(const std::string &id);
     void liveTune(const std::string &channelId, bool now);
     void liveDigit(int digit);
     void liveShowControls();

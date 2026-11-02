@@ -1795,6 +1795,7 @@
 "tv.live.noSignal": {"text": "Sin señal en HDMI {port}", "from": "No signal on HDMI {port}"},
 "tv.live.normal": {"text": "Normal", "from": "Normal"},
 "tv.live.ofTotal": {"text": "de {total} GB", "from": "of {total} GB"},
+"tv.live.onAir": {"text": "En directo", "from": "On air"},
 "tv.live.opening": {"text": "Abriendo el sintonizador…", "from": "Opening the tuner…"},
 "tv.live.panel": {"text": "Panel", "from": "Panel"},
 "tv.live.processor": {"text": "Procesador", "from": "Processor"},
