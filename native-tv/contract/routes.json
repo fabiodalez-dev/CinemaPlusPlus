@@ -693,6 +693,24 @@
       "notes": "Cinema++'s own updates from its GitHub releases: the manifest names the version and the package's SHA-256; install downloads, checks, unpacks and runs the package's install script detached."
     },
     {
+      "paths": ["/api/cinemapp/apps"],
+      "methods": ["GET"],
+      "auth": "token",
+      "csrf": "read-only",
+      "bodyLimit": {"max": 0, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Bloomee and Cinema web from their GitHub releases: installed and latest version, the release's IPK and its SHA-256 from SHA256SUMS.txt; ?check=1 asks GitHub in the background. The install itself is /api/apps/install/url."
+    },
+    {
+      "paths": ["/api/cinemapp/first-app"],
+      "methods": ["GET", "POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; POST is an admin route (admin PIN)",
+      "bodyLimit": {"max": 64, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Cinema++ as the first app at power-on: LG's last input pinned to Cinema++, the wake watcher, and Cinema web's own start set aside while it is on (lifecycle/cinemapp-first-app)."
+    },
+    {
       "paths": ["/api/music"],
       "methods": ["GET", "POST"],
       "auth": "token",

@@ -390,6 +390,9 @@ class HttpFrontDoor {
     void handleLiveTv(HttpExchange &exchange) const;
     void handleMusic(HttpExchange &exchange) const;
     void handleCinemaUpdate(HttpExchange &exchange) const;
+    void handleCinemaFirstApp(HttpExchange &exchange) const;
+    std::string jellyfinClient() const;
+    void addJellyfinClients(Json &response) const;
     void sendCinemaDiagnostics(HttpExchange &exchange) const;
     void sendHomeJellyfinImage(HttpExchange &exchange) const;
     void ledStripAction(HttpExchange &exchange, const std::string &action) const;

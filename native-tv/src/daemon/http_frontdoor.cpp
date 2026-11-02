@@ -381,6 +381,7 @@ bool adminRoute(const HttpRequest &request) {
     return uri == "/api/apps/uninstall" || uri == "/api/ssh" || uri == "/api/services/toggle" ||
            uri == "/api/backup" || uri == "/api/settings" || uri == "/api/admin/pin" ||
            uri == "/api/jellyfin/link" || uri == "/api/cinemapp/update" ||
+           uri == "/api/cinemapp/first-app" ||
            uri.compare(0, 18, "/api/apps/install/") == 0;
 }
 
@@ -1799,6 +1800,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       systemRoot_(std::move(systemRoot)), cpuWindowMs_(cpuWindowMs) {
     if (!appPackageFetcher_)
         appPackageFetcher_ = service::AppPackageFetcher::download;
+    cinemaUpdate_.setAppsDir(rootedSystemPath(systemRoot_, "/media/developer/apps/usr/palm/applications"));
     // The feed lists only titles that open somewhere: as a YouTube trailer, or on Netflix. Asking is
     // the details lookup the screen uses later, so it is kept for then.
     homeDiscover_.setLinkCheck([this](const std::string &type, const std::string &id) {
@@ -10973,6 +10975,7 @@ void HttpFrontDoor::sendCinemaDiagnostics(HttpExchange &exchange) const {
     result.set("homeKey", Json::text(home["action"].string() == "exec" ? home["command"].string()
                                                                        : home["id"].string("LG Home")));
     result.set("bootHook", Json::flag(exists(rootedSystemPath(systemRoot_, "/var/lib/webosbrew/init.d/57-cinemapp-service"))));
+    result.set("firstApp", Json::flag(exists(rootedSystemPath(systemRoot_, "/var/lib/tvweb/first-app.on"))));
     result.set("cinemaWeb", Json::flag(exists(rootedSystemPath(
         systemRoot_, "/media/developer/apps/usr/palm/applications/org.webosbrew.lounge.launcher/appinfo.json"))));
     // The processes of Cinema++ and their resident memory.
@@ -11080,6 +11083,79 @@ void HttpFrontDoor::handleCinemaUpdate(HttpExchange &exchange) const {
     Json status = cinemaUpdate_.status();
     status.set("ok", Json::flag(true));
     respond(200, status);
+}
+
+// Cinema++ as the first app at power-on (lifecycle/cinemapp-first-app): GET says whether it is
+// on, POST {"enabled"} turns it on, taking over from Cinema web, or off, giving Cinema web back.
+void HttpFrontDoor::handleCinemaFirstApp(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    Json failure = Json::object();
+    failure.set("ok", Json::flag(false));
+    const std::string script = dataFilePath(dataRoot_, "cinemapp-first-app");
+    const auto run = [this, &script](const std::string &argument, std::string &output) {
+        ChildOptions options;
+        options.arguments = {"/bin/sh", script, argument};
+        options.timeout = std::chrono::milliseconds(40000);
+        const ChildResult result = children_.run(options);
+        output = result.standardOutput;
+        while (!output.empty() && std::isspace(static_cast<unsigned char>(output.back()))) output.pop_back();
+        return result.succeeded();
+    };
+    if (access(script.c_str(), R_OK) != 0) {
+        failure.set("error", Json::text("cinemapp-first-app is not installed"));
+        respond(request.method == "GET" ? 200 : 503, failure);
+        return;
+    }
+    if (request.method == "POST") {
+        if (rejectCrossSitePost(exchange))
+            return;
+        if (!exchange.setBodyLimit(64)) {
+            sendSetupError(exchange, 413, "request body too large", true);
+            return;
+        }
+        std::string body;
+        char buffer[64];
+        for (;;) {
+            const int count = exchange.readBody(buffer, sizeof(buffer));
+            if (count == 0)
+                break;
+            if (count < 0) {
+                sendSetupError(exchange, 400, "invalid request body", true);
+                return;
+            }
+            body.append(buffer, static_cast<size_t>(count));
+        }
+        const Json enabled = Json::parse(body)["enabled"];
+        if (!enabled.isBoolean()) {
+            failure.set("error", Json::text("enabled expected"));
+            respond(400, failure);
+            return;
+        }
+        std::string output;
+        if (!run(enabled.boolean() ? "--enable" : "--disable", output)) {
+            failure.set("error", Json::text(output.empty() ? "cinemapp-first-app failed" : output));
+            respond(500, failure);
+            return;
+        }
+        if (logger_) logger_->info(std::string("Cinema++ first app: ") + output);
+    } else if (request.method != "GET") {
+        failure.set("error", Json::text("method not allowed"));
+        respond(405, failure);
+        return;
+    }
+    std::string state;
+    (void)run("--status", state);
+    Json result = Json::object();
+    result.set("ok", Json::flag(true));
+    result.set("enabled", Json::flag(state == "on"));
+    respond(200, result);
 }
 
 // Ambient music on Home: GET the settings and what plays; POST settings from the dashboard, or
@@ -11291,6 +11367,7 @@ void HttpFrontDoor::handleJellyfinLink(HttpExchange &exchange) const {
         response.set("ok", Json::flag(true));
         if (!error.empty())
             response.set("error", Json::text(error));
+        addJellyfinClients(response);
         respond(200, response);
         return;
     }
@@ -11339,6 +11416,22 @@ void HttpFrontDoor::handleJellyfinLink(HttpExchange &exchange) const {
         ok = jellyfinLink_.unlink(error);
         if (ok)
             homeJellyfin_.refreshNow();
+    } else if (action == "client") {
+        // The app Jellyfin titles open in; empty for the first one installed.
+        const std::string client = payload["client"].string();
+        const auto &known = service::homeJellyfinClients();
+        if (!client.empty() && std::find(known.begin(), known.end(), client) == known.end()) {
+            fail(400, "unknown Jellyfin client");
+            return;
+        }
+        const std::string path = dataFilePath(dataRoot_, "jellyfin-client");
+        {
+            std::ofstream out((path + ".tmp").c_str(), std::ios::trunc);
+            out << client << "\n";
+            ok = static_cast<bool>(out);
+        }
+        ok = ok && std::rename((path + ".tmp").c_str(), path.c_str()) == 0;
+        if (!ok) error = "could not save the client";
     } else {
         fail(400, "action expected");
         return;
@@ -11349,7 +11442,32 @@ void HttpFrontDoor::handleJellyfinLink(HttpExchange &exchange) const {
     }
     Json response = jellyfinLink_.status();
     response.set("ok", Json::flag(true));
+    addJellyfinClients(response);
     respond(200, response);
+}
+
+std::string HttpFrontDoor::jellyfinClient() const {
+    std::ifstream in(dataFilePath(dataRoot_, "jellyfin-client").c_str());
+    std::string client;
+    std::getline(in, client);
+    return client;
+}
+
+// The preferred client and the Jellyfin apps on this TV, for the dashboard's choice.
+void HttpFrontDoor::addJellyfinClients(Json &response) const {
+    response.set("client", Json::text(jellyfinClient()));
+    const Json apps = homeCatalogueAppsSnapshot();
+    Json installed = Json::array();
+    for (const std::string &id : service::homeJellyfinClients())
+        for (const auto &app : apps.items())
+            if (app["id"].string() == id) {
+                Json entry = Json::object();
+                entry.set("id", Json::text(id));
+                entry.set("title", Json::text(app["title"].string(id)));
+                installed.add(entry);
+                break;
+            }
+    response.set("clients", installed);
 }
 
 void HttpFrontDoor::setMemoryToggle(HttpExchange &exchange) const {
@@ -18019,7 +18137,8 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
 
     const service::HomeOpenPlan plan =
         service::planHomeOpen(kind, id, apps, devices, channels,
-                              payload["action"].isString() ? payload["action"].string() : "");
+                              payload["action"].isString() ? payload["action"].string() : "",
+                              jellyfinClient());
     if (!plan.handled) {
         (void)proxy_.forwardBufferedBody(exchange, body);
         return;
@@ -18659,6 +18778,25 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/cinemapp/update") {
         handleCinemaUpdate(exchange);
+        return;
+    }
+    if (request.uri == "/api/cinemapp/apps" && request.method == "GET") {
+        // Bloomee and Cinema web from their GitHub releases; the dashboard installs with
+        // /api/apps/install/url, the IPK's URL and its SHA-256.
+        std::string checkNow;
+        if (uniqueQueryParameter(request.query, "check", checkNow) && checkNow == "1")
+            cinemaUpdate_.checkApps();
+        Json status = cinemaUpdate_.appsStatus();
+        status.set("ok", Json::flag(true));
+        (void)exchange.respond(200,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               status.dump());
+        return;
+    }
+    if (request.uri == "/api/cinemapp/first-app") {
+        handleCinemaFirstApp(exchange);
         return;
     }
     if (request.uri == "/api/music") {

@@ -55,6 +55,15 @@ int main() {
         auto rows = homeRows("home", catalogue, Json(), Json());
         check(rows.size() == 1 && rows[0].cards.size() == 1 && rows[0].cards[0].id == "a",
               "Hidden apps and LG Home remain hidden");
+        // A feed that came back empty: Cinema's shortcuts after the apps, ending with live TV
+        // and all the apps.
+        rows = homeRows("home", catalogue, Json::parse(R"({"rows":[]})"), Json());
+        check(rows.size() == 2 && rows[1].key == "shortcuts" && rows[1].cards.size() == 2 &&
+                  rows[1].cards[0].command.route == "home:tab:live",
+              "Shortcuts replace an empty feed");
+        rows = homeRows("home", catalogue,
+                        Json::parse(R"({"rows":[{"key":"trending","items":[{"id":"1","title":"T"}]}]})"), Json());
+        check(rows.size() == 2 && rows[1].key == "trending", "No shortcuts beside the feed");
         auto inputs = homeRows("inputs", catalogue, Json(), Json());
         check(inputs[0].cards[0].command.body["kind"].string() == "dev",
               "Input launch uses the existing API contract");

@@ -56,6 +56,19 @@ int main() {
     assert(plan.row == "app" && plan.rowId == "com.webos.app.netflix");
     assert(plan.error.empty());
 
+    // A Jellyfin title: LiteFin first, with the title itself; a preferred client wins when installed.
+    apps.add(app("org.litefin.app"));
+    apps.add(app("org.moonfin.webos"));
+    const std::string title = "0123456789abcdef0123456789abcdef";
+    plan = planHomeOpen("jellyfin", title, apps, devices, channels);
+    assert(plan.ok && plan.appId == "org.litefin.app" && plan.launchParams["cinemaItemId"].string() == title);
+    plan = planHomeOpen("jellyfin", title, apps, devices, channels, "", "org.moonfin.webos");
+    assert(plan.ok && plan.appId == "org.moonfin.webos" && !plan.launchParams.valid());
+    plan = planHomeOpen("jellyfin", title, apps, devices, channels, "", "org.jellyfin.webos");
+    assert(plan.ok && plan.appId == "org.litefin.app"); // not installed: the first that is
+    plan = planHomeOpen("jellyfin", title, apps, devices, channels, "", "com.example.other");
+    assert(plan.ok && plan.appId == "org.litefin.app"); // not a Jellyfin client
+
     // Only what the catalogue lists can be opened.
     plan = planHomeOpen("app", "com.example.unknown", apps, devices, channels);
     assert(plan.handled && !plan.ok);

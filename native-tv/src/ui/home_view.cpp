@@ -300,6 +300,17 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0, float fadeTop = -
                 tile.focus = focus;
                 tile.enter = enter;
                 kit::inputTile(paint, tile);
+            } else if (row.key == "shortcuts") {
+                // Cinema's shortcuts, when Jellyfin has no titles: a name, what it opens, an icon.
+                kit::InputTile tile;
+                tile.rest = rest;
+                tile.id = id;
+                tile.name = card.title;
+                tile.sub = card.subtitle;
+                tile.icon = card.data["icon"].string("apps");
+                tile.focus = focus;
+                tile.enter = enter;
+                kit::inputTile(paint, tile);
             } else {
                 kit::PosterCard poster;
                 poster.rest = rest;

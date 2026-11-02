@@ -355,12 +355,61 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         {"jf-movies", say::msg("tv.home.row.jfMovies", "Your films")},
         {"jf-series", say::msg("tv.home.row.jfSeries", "Your series")},
         {"jf-music", say::msg("tv.home.row.jfMusic", "Your music")}};
+    bool libraryShown = false;
     for (const auto &key : {"jf-continue", "jf-recent", "jf-movies", "jf-series", "jf-music"}) {
         if (!feedRows.count(key))
             continue;
         CardRow row = jellyfinRow(key, library.at(key), feedRows[key]);
-        if (!row.cards.empty())
+        if (!row.cards.empty()) {
             result.push_back(row);
+            libraryShown = true;
+        }
+    }
+    // A loaded feed with nothing in it (no library, no picks): Cinema's shortcuts instead, a
+    // Jellyfin app, YouTube, live TV and the inputs, all the apps.
+    bool feedShown = false;
+    for (const auto &key : {"trending", "movies", "series", "netflix", "youtube"})
+        feedShown = feedShown || (feedRows.count(key) && feedRows[key]["items"].size() > 0);
+    if (!libraryShown && !feedShown && discover["rows"].isArray()) {
+        CardRow shortcuts;
+        shortcuts.key = "shortcuts";
+        shortcuts.title = say::msg("tv.home.row.shortcuts", "Your shortcuts");
+        const CardRow installed = catalogueRow("app", catalogue, guide);
+        const auto addApp = [&](std::initializer_list<const char *> ids, const std::string &subtitle,
+                                const char *icon) {
+            for (const char *id : ids)
+                for (const Card &card : installed.cards)
+                    if (card.id == id) {
+                        Card copy = card;
+                        copy.id = "shortcut:" + card.id;
+                        copy.subtitle = subtitle;
+                        copy.data.set("icon", Json::text(icon));
+                        shortcuts.cards.push_back(copy);
+                        return;
+                    }
+        };
+        addApp({"org.litefin.app", "org.moonfin.webos", "org.jellyfin.webos", "com.breezyfin.app", "com.ocenfin.app"},
+               say::msg("tv.home.shortcut.jellyfin", "Your own library"), "movie");
+        addApp({"youtube.leanback.v4"}, say::msg("tv.home.shortcut.youtube", "Videos and your channels"), "play");
+        Card live;
+        live.id = "shortcut:live";
+        live.kind = "app";
+        live.title = say::msg("tv.home.shortcut.live", "TV and HDMI");
+        live.subtitle = say::msg("tv.home.shortcut.liveSub", "Channels and connected devices");
+        live.data = Json::object();
+        live.data.set("icon", Json::text("tv"));
+        live.command = navigate("home:tab:live");
+        shortcuts.cards.push_back(live);
+        Card all;
+        all.id = "shortcut:all";
+        all.kind = "app";
+        all.title = say::msg("tv.home.allApps", "All apps");
+        all.subtitle = say::msg("tv.home.shortcut.allSub", "Every app installed");
+        all.data = Json::object();
+        all.data.set("icon", Json::text("apps"));
+        all.command = navigate("home:tab:apps");
+        shortcuts.cards.push_back(all);
+        result.push_back(shortcuts);
     }
     for (const auto &key : {"trending", "movies", "series", "netflix", "youtube"}) {
         if (!feedRows.count(key))

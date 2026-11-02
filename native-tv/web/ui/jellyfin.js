@@ -29,6 +29,12 @@ function jfFill(d) {
     : waiting ? t('jf.waiting', 'Waiting for the code to be approved ({n} s left)', { n: String(d.expiresInS || 0) })
       : t('jf.unlinked', 'Not linked');
   if (d.error) q('jf-msg').textContent = d.error;
+  const select = q('jf-client');
+  if (select && Array.isArray(d.clients)) {
+    while (select.options.length > 1) select.remove(1);
+    d.clients.forEach(function (c) { select.add(new Option(c.title, c.id)); });
+    select.value = d.client || '';
+  }
 }
 
 async function jfPoll() {
@@ -52,9 +58,9 @@ async function jfStart() {
   finally { button.disabled = false; }
 }
 
-async function jfAction(action) {
+async function jfAction(action, extra) {
   q('jf-msg').textContent = '';
-  try { jfFill(await jfPost({ action: action })); } catch (e) { q('jf-msg').textContent = e.message; }
+  try { jfFill(await jfPost(Object.assign({ action: action }, extra || {}))); } catch (e) { q('jf-msg').textContent = e.message; }
 }
 
 async function jfRefresh() {

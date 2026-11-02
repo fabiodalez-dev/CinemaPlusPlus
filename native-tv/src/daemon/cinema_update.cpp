@@ -146,6 +146,126 @@ CinemaUpdate::~CinemaUpdate() {
 
 void CinemaUpdate::wait() {
     if (worker_.joinable()) worker_.join();
+    if (appsWorker_.joinable()) appsWorker_.join();
+}
+
+bool CinemaUpdate::pickRelease(const Json &releases, const std::string &appId, const std::string &tagPrefix,
+                               Json &release) {
+    bool found = false;
+    for (size_t i = 0; i < releases.size(); ++i) {
+        const Json &candidate = releases[i];
+        if (candidate["draft"].boolean() || candidate["prerelease"].boolean()) continue;
+        const std::string tag = candidate["tag_name"].string();
+        int parts[3];
+        if (tag.compare(0, tagPrefix.size(), tagPrefix) != 0 || !version(tag.substr(tagPrefix.size()), parts))
+            continue;
+        const std::string versionText = tag.substr(tagPrefix.size());
+        const std::string ipk = appId + "_" + versionText + "_all.ipk";
+        std::string ipkUrl, sumsUrl;
+        const Json &assets = candidate["assets"];
+        for (size_t a = 0; a < assets.size(); ++a) {
+            const std::string name = assets[a]["name"].string();
+            const std::string url = assets[a]["browser_download_url"].string();
+            if (url.compare(0, 19, "https://github.com/") != 0) continue;
+            if (name == ipk) ipkUrl = url;
+            if (name == "SHA256SUMS.txt") sumsUrl = url;
+        }
+        if (ipkUrl.empty() || sumsUrl.empty()) continue;
+        if (found && !newer(versionText, release["latest"].string())) continue;
+        release = Json::object();
+        release.set("latest", Json::text(versionText));
+        release.set("ipk", Json::text(ipk));
+        release.set("ipkUrl", Json::text(ipkUrl));
+        release.set("sumsUrl", Json::text(sumsUrl));
+        release.set("notes", Json::text(candidate["body"].string().substr(0, 1500)));
+        release.set("url", candidate["html_url"]);
+        found = true;
+    }
+    return found;
+}
+
+std::string CinemaUpdate::sumFor(const std::string &sums, const std::string &name) {
+    std::istringstream lines(sums);
+    std::string line, found;
+    while (std::getline(lines, line)) {
+        std::istringstream words(line);
+        std::string hash, file, extra;
+        if (!(words >> hash >> file) || (words >> extra)) continue;
+        if (!file.empty() && file[0] == '*') file.erase(0, 1);
+        if (file != name || hash.size() != 64) continue;
+        bool hex = true;
+        for (char &c : hash) {
+            hex = hex && std::isxdigit(static_cast<unsigned char>(c));
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        if (hex) found = hash;
+    }
+    return found;
+}
+
+Json CinemaUpdate::appsStatus() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    Json result = Json::object();
+    result.set("state", Json::text(appsState_));
+    result.set("apps", apps_.isArray() ? apps_ : Json::array());
+    return result;
+}
+
+void CinemaUpdate::checkApps() {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (appsState_ == "checking") return;
+        appsState_ = "checking";
+    }
+    if (appsWorker_.joinable()) appsWorker_.join();
+    appsWorker_ = std::thread([this]() {
+        struct App {
+            const char *id, *name, *repo, *tag;
+        };
+        static const App kApps[] = {
+            {"org.bloomee.webos", "Bloomee", "fabiodalez-dev/BloomeeWebOS", "webos-v"},
+            {"org.webosbrew.lounge.launcher", "Cinema", "fabiodalez-dev/Cinema", "v"},
+        };
+        Json apps = Json::array();
+        for (const App &app : kApps) {
+            Json entry = Json::object();
+            entry.set("id", Json::text(app.id));
+            entry.set("name", Json::text(app.name));
+            std::ifstream info((appsDir_ + "/" + app.id + "/appinfo.json").c_str());
+            std::stringstream infoText;
+            infoText << info.rdbuf();
+            const std::string installed = Json::parse(infoText.str())["version"].string();
+            if (installed.empty()) continue; // only apps on this TV
+            entry.set("installed", Json::text(installed));
+            std::string body, error;
+            Json release;
+            if (!fetch_(std::string("https://api.github.com/repos/") + app.repo + "/releases?per_page=15", body, "",
+                        2 * 1024 * 1024, error)) {
+                entry.set("error", Json::text(error));
+            } else if (!pickRelease(Json::parse(body), app.id, app.tag, release)) {
+                entry.set("error", Json::text("no release with an IPK and SHA256SUMS.txt"));
+            } else {
+                std::string sums;
+                const std::string sha =
+                    fetch_(release["sumsUrl"].string(), sums, "", 65536, error) ? sumFor(sums, release["ipk"].string()) : "";
+                entry.set("latest", release["latest"]);
+                entry.set("notes", release["notes"]);
+                entry.set("url", release["url"]);
+                entry.set("available", Json::flag(newer(release["latest"].string(), installed)));
+                if (sha.empty()) {
+                    entry.set("available", Json::flag(false));
+                    entry.set("error", Json::text("the IPK is not in SHA256SUMS.txt"));
+                } else {
+                    entry.set("ipkUrl", release["ipkUrl"]);
+                    entry.set("sha256", Json::text(sha));
+                }
+            }
+            apps.add(entry);
+        }
+        std::lock_guard<std::mutex> lock(mutex_);
+        apps_ = apps;
+        appsState_ = "idle";
+    });
 }
 
 void CinemaUpdate::run(std::function<void()> job) {

@@ -1465,6 +1465,12 @@
             <button type="button" class="btn btn-tonal" onclick="jfRefresh()" data-t="jf.refresh">Refresh Home now</button>
             <button type="button" class="btn btn-tonal" onclick="jfAction('unlink')" data-t="jf.unlink">Unlink</button>
           </div>
+          <div class="setting-row">
+            <label for="jf-client" data-t="jf.client">Open titles in</label>
+            <select id="jf-client" onchange="jfAction('client', { client: this.value })">
+              <option value="" data-t="jf.client.auto">The first Jellyfin app installed</option>
+            </select>
+          </div>
           <p class="sub" id="jf-msg" role="status"></p>
         </div>
       </section>
@@ -2717,6 +2723,23 @@
             <button type="button" class="btn btn-tonal" onclick="updateAct('check')" data-t="update.check">Check now</button>
             <button type="button" class="btn btn-filled" id="btn-update-install" onclick="updateAct('install')" data-t="update.install" hidden>Install</button>
           </div>
+        </div>
+        <div class="card" style="--p:2;--t:4;--d:12">
+          <h2 data-t="appsupdate.title">Bloomee and Cinema web updates</h2>
+          <p class="sub" data-t="appsupdate.desc">Their new versions come from their own releases on GitHub. Update installs the release's IPK, checked against the SHA-256 the release lists.</p>
+          <ul class="sub" id="appsupdate-list"></ul>
+          <div class="setting-row">
+            <button type="button" class="btn btn-tonal" onclick="loadAppsUpdate(true)" data-t="update.check">Check now</button>
+          </div>
+        </div>
+        <div class="card" style="--p:2;--t:4;--d:12">
+          <h2 data-t="firstapp.title">Cinema++ at power-on</h2>
+          <p class="sub" data-t="firstapp.desc">The TV opens Cinema++ when it is switched on and when it wakes from standby, in place of live TV or Cinema web. Cinema web's own start is set aside while this is on, and comes back when it is turned off.</p>
+          <div class="setting-row">
+            <label for="firstapp-enabled" data-t="firstapp.enabled">Open Cinema++ at power-on</label>
+            <input type="checkbox" id="firstapp-enabled" onchange="firstAppSave(this.checked)">
+          </div>
+          <p class="sub" id="firstapp-status" role="status"></p>
         </div>
         <div class="card" style="--p:2;--t:4;--d:12">
           <h2 data-t="diag.title">Diagnostics</h2>

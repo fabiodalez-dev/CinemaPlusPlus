@@ -3,6 +3,7 @@
 #include "core/json.hpp"
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace nativetv {
 namespace service {
@@ -28,9 +29,15 @@ bool homeOpenHandledKind(const std::string &kind, const std::string &id);
 // launches its launch point, a device opens its HDMI input, a channel tunes,
 // and YouTube videos and Netflix titles create app-specific launch parameters.
 // Those two are the only deep links; a title is never opened in another app.
+// A Jellyfin title opens in `preferredClient` when it is installed, else in the first of
+// the clients Cinema knows (homeJellyfinClients).
 HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
                           const Json &apps, const Json &devices,
-                          const Json &channels, const std::string &action = "");
+                          const Json &channels, const std::string &action = "",
+                          const std::string &preferredClient = "");
+
+// The Jellyfin apps Cinema opens titles in, LiteFin (which opens the title itself) first.
+const std::vector<std::string> &homeJellyfinClients();
 
 // Complete the external Wikidata lookup before launching Netflix. The native
 // HomeContent service returns the same P1874 link data as the public endpoint.

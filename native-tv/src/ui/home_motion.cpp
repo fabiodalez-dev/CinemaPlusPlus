@@ -62,7 +62,7 @@ size_t rowIndex(const std::vector<CardRow> &rows, const char *key) {
 size_t defaultRow(const HomeState &home) {
     if (home.tabs.empty() || home.tabs[home.tab].key != "home")
         return 0;
-    for (const char *key : {"jf-continue", "jf-recent", "trending"}) {
+    for (const char *key : {"jf-continue", "jf-recent", "shortcuts", "trending"}) {
         const size_t at = rowIndex(home.rows, key);
         if (at < home.rows.size())
             return at;

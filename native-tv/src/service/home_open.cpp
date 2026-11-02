@@ -1,6 +1,7 @@
 #include "service/home_open.hpp"
 #include "domain/names.hpp"
 #include "domain/say.hpp"
+#include <algorithm>
 #include <cctype>
 
 namespace nativetv {
@@ -51,9 +52,16 @@ bool homeOpenHandledKind(const std::string &kind, const std::string &id) {
     return kind != "lg" && !(kind == "app" && id == kLgHomeTile);
 }
 
+const std::vector<std::string> &homeJellyfinClients() {
+    static const std::vector<std::string> clients = {"org.litefin.app", "org.moonfin.webos", "org.jellyfin.webos",
+                                                     "com.breezyfin.app", "com.ocenfin.app"};
+    return clients;
+}
+
 HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
                           const Json &apps, const Json &devices,
-                          const Json &channels, const std::string &action) {
+                          const Json &channels, const std::string &action,
+                          const std::string &preferredClient) {
     HomeOpenPlan plan;
     plan.handled = homeOpenHandledKind(kind, id);
     if (!plan.handled) return plan;
@@ -99,11 +107,14 @@ HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
         bool hex = id.size() == 32;
         for (char c : id) hex = hex && std::isxdigit(static_cast<unsigned char>(c));
         if (!hex) return plan;
-        for (const char *client : {"org.litefin.app", "org.moonfin.webos", "org.jellyfin.webos",
-                                   "com.breezyfin.app", "com.ocenfin.app"}) {
+        std::vector<std::string> clients = homeJellyfinClients();
+        if (!preferredClient.empty() &&
+            std::find(clients.begin(), clients.end(), preferredClient) != clients.end())
+            clients.insert(clients.begin(), preferredClient);
+        for (const std::string &client : clients) {
             if (!findListed(apps, client).valid()) continue;
             setLaunch(plan, client);
-            if (std::string(client) == "org.litefin.app") {
+            if (client == "org.litefin.app") {
                 plan.launchParams = Json::object();
                 plan.launchParams.set("cinemaItemId", Json::text(id));
                 plan.launchParams.set("cinemaAction", Json::text(action == "resume" ? "resume" : "details"));

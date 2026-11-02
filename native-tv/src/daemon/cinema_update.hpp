@@ -34,6 +34,20 @@ class CinemaUpdate {
     static bool newer(const std::string &candidate, const std::string &current);
     static bool parseManifest(const std::string &body, Json &manifest);
 
+    // The other apps Cinema updated, Bloomee and Cinema web, from their own GitHub releases:
+    // installed and latest version, the release's IPK and its SHA-256 from SHA256SUMS.txt, for
+    // the service's own install from a URL. Checked in the background.
+    void setAppsDir(std::string appsDir) { appsDir_ = std::move(appsDir); }
+    // {"state": idle|checking, "apps": [{"id", "name", "installed", "latest", "available", "ipkUrl",
+    // "sha256", "notes", "error"}]}.
+    Json appsStatus();
+    void checkApps();
+    // The newest published release of `releases` (GitHub's list) whose tag is tagPrefix and a
+    // version and that ships <appId>_<version>_all.ipk and SHA256SUMS.txt.
+    static bool pickRelease(const Json &releases, const std::string &appId, const std::string &tagPrefix,
+                            Json &release);
+    static std::string sumFor(const std::string &sums, const std::string &name);
+
   private:
     void run(std::function<void()> job);
 
@@ -44,6 +58,10 @@ class CinemaUpdate {
     std::thread worker_;
     std::string state_ = "idle", error_;
     Json manifest_;
+    std::string appsDir_ = "/media/developer/apps/usr/palm/applications";
+    std::thread appsWorker_;
+    std::string appsState_ = "idle";
+    Json apps_;
 };
 
 } // namespace daemon
