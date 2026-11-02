@@ -30,7 +30,7 @@ var panelIds = {};
 Object.keys(TABS).forEach(function (key) { panelIds[TABS[key]] = true; });
 
 (function testPanelsAndTabs() {
-  assert.strictEqual(Object.keys(panelIds).length, 16, 'the 16 panels are all reachable');
+  assert.strictEqual(Object.keys(panelIds).length, 17, 'the 17 panels are all reachable');
   Object.keys(panelIds).forEach(function (id) {
     assert(new RegExp('<section[^>]*id="' + id + '"[^>]*role="tabpanel"').test(html), id + ' is a tab panel in ui.html');
   });

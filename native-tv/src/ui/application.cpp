@@ -114,6 +114,7 @@ void Application::active(bool value) {
     } else {
         clearPicture();
         liveClose();
+        musicSync();
     }
     dirty_ = true;
 }
@@ -143,6 +144,7 @@ bool Application::update(uint32_t now) {
         homeBeat(nullptr);
     }
     liveSync();
+    musicSync();
     if (screen_)
         screenBusy = screen_->update(*this);
     // The wallpaper is shown once its picture has arrived.

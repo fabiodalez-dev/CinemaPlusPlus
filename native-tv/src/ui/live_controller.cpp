@@ -225,4 +225,26 @@ bool Application::liveKey(Key key) {
     dirty_ = true;
     return hidden && key != Key::Back;
 }
+// Ambient music plays while Home shows (not over live TV or an input, not behind another
+// screen or app); the service fades it in and out.
+void Application::musicSync() {
+    // Not before the server has said whether first-run setup is done: setup comes first.
+    const bool shown = active_ && capsAnswered_ && state_.screen == Screen::Home && !screen_ &&
+                       !state_.live.open && !coveredForCaps();
+    if (shown == musicShown_)
+        return;
+    musicShown_ = shown;
+    Json body = Json::object();
+    body.set("action", Json::text("home"));
+    body.set("shown", Json::flag(shown));
+    (void)services_.write("music", Operation::Music, body);
+}
+
+void Application::musicKey(bool next) {
+    if (state_.screen != Screen::Home || screen_)
+        return;
+    Json body = Json::object();
+    body.set("action", Json::text(next ? "next" : "toggle"));
+    (void)services_.write("music", Operation::Music, body);
+}
 } // namespace nativetv

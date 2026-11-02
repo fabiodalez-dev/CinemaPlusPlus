@@ -18,6 +18,7 @@
 #include "service/jellyfin_link.hpp"
 #include "service/home_weather.hpp"
 #include "daemon/live_tv.hpp"
+#include "daemon/ambient_music.hpp"
 #include "service/home_image_proxy.hpp"
 #include "service/home_picture.hpp"
 #include "service/home_open.hpp"
@@ -386,6 +387,7 @@ class HttpFrontDoor {
     void handleJellyfinLink(HttpExchange &exchange) const;
     void handleHomeWeather(HttpExchange &exchange) const;
     void handleLiveTv(HttpExchange &exchange) const;
+    void handleMusic(HttpExchange &exchange) const;
     void sendHomeJellyfinImage(HttpExchange &exchange) const;
     void ledStripAction(HttpExchange &exchange, const std::string &action) const;
     void sendDashboardSettings(HttpExchange &exchange) const;
@@ -444,6 +446,7 @@ class HttpFrontDoor {
     mutable service::JellyfinLink jellyfinLink_;
     mutable service::HomeWeather homeWeather_;
     mutable LiveTv liveTv_;
+    mutable AmbientMusic ambientMusic_;
     mutable service::HomeImageProxy homeImageProxy_;
     std::string configPath_;
     std::string hdmiSeenPath_;

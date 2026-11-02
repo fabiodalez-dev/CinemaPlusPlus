@@ -1771,6 +1771,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       jellyfinLink_(rootedSystemPath(systemRoot, "/var/lib/launch-home-cinema/jellyfin.json")),
       homeWeather_(dataRoot_),
       liveTv_(rootedSystemPath(systemRoot, "/run/nativetv-live")),
+      ambientMusic_(dataRoot_, rootedSystemPath(systemRoot, "/run/nativetv-music")),
       homeImageProxy_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
@@ -10944,6 +10945,74 @@ void HttpFrontDoor::ledStripAction(HttpExchange &exchange, const std::string &ac
     respond(200, response);
 }
 
+// Ambient music on Home: GET the settings and what plays; POST settings from the dashboard, or
+// {"action": "home", "shown"} / "next" / "toggle" from the TV's own client.
+void HttpFrontDoor::handleMusic(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    Json failure = Json::object();
+    failure.set("ok", Json::flag(false));
+    if (request.method == "GET") {
+        Json state = ambientMusic_.state();
+        state.set("ok", Json::flag(true));
+        respond(200, state);
+        return;
+    }
+    if (request.method != "POST") {
+        failure.set("error", Json::text("method not allowed"));
+        respond(405, failure);
+        return;
+    }
+    const bool loopback = isLoopbackPeer(request.remoteAddress);
+    if (!config_.allowControl && !loopback) {
+        sendSetupError(exchange, 403, say::msg("srv.controlsOff", "controls disabled in config"));
+        return;
+    }
+    if (rejectCrossSitePost(exchange))
+        return;
+    if (!exchange.setBodyLimit(4096)) {
+        sendSetupError(exchange, 413, "request body too large", true);
+        return;
+    }
+    std::string body;
+    char buffer[1024];
+    for (;;) {
+        const int count = exchange.readBody(buffer, sizeof(buffer));
+        if (count == 0)
+            break;
+        if (count < 0) {
+            sendSetupError(exchange, 400, "invalid request body", true);
+            return;
+        }
+        body.append(buffer, static_cast<size_t>(count));
+    }
+    const Json payload = Json::parse(body);
+    const std::string action = payload["action"].string();
+    if (action == "home")
+        ambientMusic_.home(payload["shown"].boolean());
+    else if (action == "next")
+        ambientMusic_.next();
+    else if (action == "toggle")
+        ambientMusic_.toggle();
+    else {
+        std::string error;
+        if (!ambientMusic_.configure(payload, error)) {
+            failure.set("error", Json::text(error));
+            respond(400, failure);
+            return;
+        }
+    }
+    Json state = ambientMusic_.state();
+    state.set("ok", Json::flag(true));
+    respond(200, state);
+}
+
 // Live TV inside Home: GET the state; POST {"action": "open"|"tune"|"close", ...} from the TV's
 // own client, which owns the video window (see LiveTv).
 void HttpFrontDoor::handleLiveTv(HttpExchange &exchange) const {
@@ -18417,6 +18486,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/jellyfin/image" && request.method == "GET") {
         sendHomeJellyfinImage(exchange);
+        return;
+    }
+    if (request.uri == "/api/music") {
+        handleMusic(exchange);
         return;
     }
     if (request.uri == "/api/live") {

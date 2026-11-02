@@ -62,6 +62,7 @@ const GuardedRoute kGuardedRoutes[] = {
     {"/api/jellyfin/link", ContentTypeRule::JsonPrefix},
     {"/api/home/weather", ContentTypeRule::JsonPrefix},
     {"/api/live", ContentTypeRule::JsonPrefix},
+    {"/api/music", ContentTypeRule::JsonPrefix},
     {"/api/home/jellyfin/refresh", ContentTypeRule::JsonPrefix},
     {"/api/memory/toggle", ContentTypeRule::JsonPrefix},
     {"/api/ledstrip", ContentTypeRule::JsonPrefix},

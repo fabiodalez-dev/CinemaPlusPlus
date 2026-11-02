@@ -675,6 +675,15 @@
       "notes": "The daemon validates open/close actions against the current recent list. Close operations stop running native or web apps, confirm exit with retries before removing selected cards, and preserve newly added or Home cards. Node retains standalone and startup-fallback handling."
     },
     {
+      "paths": ["/api/music"],
+      "methods": ["GET", "POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; POST requires allowControl unless from TV loopback",
+      "bodyLimit": {"max": 4096, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Ambient music on Home (Cinema's built-in tracks or a USB lounge/music folder) through LG's media service: GET the settings and what plays; POST settings, or home/next/toggle from the TV client."
+    },
+    {
       "paths": ["/api/live"],
       "methods": ["GET", "POST"],
       "auth": "token",

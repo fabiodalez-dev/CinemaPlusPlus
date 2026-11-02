@@ -546,6 +546,10 @@ int main(int argc, char **argv) {
                             key = event.key.keysym.scancode == 480 ? Key::PageUp : Key::PageDown;
                             known = true;
                         }
+                        // Green and Yellow: the ambient music's next track, and pause or play.
+                        if (!known && !event.key.repeat &&
+                            (event.key.keysym.scancode == 487 || event.key.keysym.scancode == 488))
+                            app.musicKey(event.key.keysym.scancode == 487);
                         // The remote's numbers open the apps on Home by their place, as on Cinema.
                         const SDL_Keycode digit = event.key.keysym.sym;
                         if (!known && !event.key.repeat && digit >= SDLK_1 && digit <= SDLK_9 &&

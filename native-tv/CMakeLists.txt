@@ -92,7 +92,7 @@ add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
   src/daemon/remote_button_log_watcher.cpp
   src/daemon/remote_keys_reconciler.cpp
   src/daemon/state_subscriptions.cpp
-  src/daemon/screen_time_enforcer.cpp src/daemon/syslog_forwarder.cpp src/daemon/live_tv.cpp)
+  src/daemon/screen_time_enforcer.cpp src/daemon/syslog_forwarder.cpp src/daemon/live_tv.cpp src/daemon/ambient_music.cpp)
 target_link_libraries(nativetv_daemon PUBLIC nativetv_core nativetv_client_config nativetv_state
   Threads::Threads PkgConfig::CURL)
 target_link_libraries(nativetv_daemon PUBLIC nativetv_history)
@@ -788,6 +788,10 @@ if(BUILD_TESTING)
   target_link_libraries(native-live-tv-tests PRIVATE nativetv_daemon)
   target_compile_options(native-live-tv-tests PRIVATE -Wall -Wextra -Werror)
   add_test(NAME native-live-tv COMMAND native-live-tv-tests)
+  add_executable(native-ambient-music-tests tests/ambient_music.cpp)
+  target_link_libraries(native-ambient-music-tests PRIVATE nativetv_daemon)
+  target_compile_options(native-ambient-music-tests PRIVATE -Wall -Wextra -Werror)
+  add_test(NAME native-ambient-music COMMAND native-ambient-music-tests)
   add_executable(native-ambilight-colors-tests tests/ambilight_colors.cpp)
   target_link_libraries(native-ambilight-colors-tests PRIVATE nativetv_ambilight)
   target_compile_options(native-ambilight-colors-tests PRIVATE -Wall -Wextra -Werror)

@@ -150,6 +150,8 @@ std::string legacyRoute(Operation operation, const Json &arguments) {
         return "/api/apps/install/cancel";
     case Operation::Settings:
         return "/api/settings";
+    case Operation::Music:
+        return "/api/music";
     case Operation::Live:
         return "/api/live";
     case Operation::AdminUnlock:

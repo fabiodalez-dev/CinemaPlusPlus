@@ -19,6 +19,7 @@ const TABS = {
   ledstrip:    'ledpane',
   jellyfin:    'jfpane',
   weather:     'wxpane',
+  music:       'musicpane',
   privacy:     'privpane',
   mqtt:        'mqttpane',
   server:      'serverpane',
@@ -30,7 +31,7 @@ const TABS = {
 const SECTION_OF = {
   control: 'overview', metrics: 'overview',
   apps: 'apps', catalogue: 'apps', homescreen: 'apps', home: 'apps', jellyfin: 'apps',
-  oledcare: 'display', screensaver: 'display', game: 'display', ledstrip: 'display', weather: 'display',
+  oledcare: 'display', screensaver: 'display', game: 'display', ledstrip: 'display', weather: 'display', music: 'display',
   privacy: 'privacy',
   mqtt: 'settings', server: 'settings', tools: 'settings', advanced: 'settings', servicemenu: 'settings'
 };
@@ -141,6 +142,7 @@ function showTab(name) {
   if (name === 'ledstrip') loadLedStrip();
   jfPolling(name === 'jellyfin');
   if (name === 'weather') loadWeather();
+  if (name === 'music') loadMusic();
   if (name === 'privacy') loadPrivacy();
   if (name === 'mqtt') loadSettings();
   // Opened at the newest line, wherever it was left scrolled.

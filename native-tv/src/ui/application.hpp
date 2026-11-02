@@ -156,6 +156,8 @@ class Application : private ScreenHost {
     void liveDigit(int digit);
     void liveShowControls();
     std::vector<Json> liveChannels() const;
+    bool musicShown_ = false;
+    void musicSync();
     // Home's choreography (home_motion.cpp).
     struct HomeFlow {
         bool entered = false;        // the page's entrance has played
@@ -277,6 +279,8 @@ class Application : private ScreenHost {
     }
     // A number key on Home: opens the app in that place of the apps row (1 is the first).
     void digit(int place);
+    // The remote's Green (next track) and Yellow (pause or play) on Home: the ambient music.
+    void musicKey(bool next);
     void input(const std::string &text);
     void click(float x, float y);
     bool activate(const std::string &id);
