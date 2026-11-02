@@ -33,3 +33,26 @@ async function updateAct(action) {
     updateFill(d);
   } catch (e) { q('update-status').textContent = e.message; }
 }
+
+// Diagnostics (Settings > Server): the TV's own summary of Cinema++.
+async function loadDiagnostics() {
+  try {
+    const d = await (await fetch(api('/api/cinemapp/diagnostics'))).json();
+    const lines = [
+      'Cinema++ ' + d.cinemapp + ' · Native Tv ' + d.nativetv,
+      t('diag.homeKey', 'Home key') + ': ' + d.homeKey,
+      t('diag.bootHook', 'Service at boot') + ': ' + (d.bootHook ? '✓' : '✗'),
+      'Jellyfin: ' + d.jellyfin + ' · ' + t('diag.weather', 'weather') + ': ' + d.weather + ' · ' +
+        t('diag.music', 'music') + ': ' + d.music,
+      'Live: ' + (d.live && d.live.playing ? (d.live.source || 'tv') : '-'),
+      t('diag.memory', 'Free memory') + ': ' + Math.round((d.memAvailableKb || 0) / 1024) + ' MB'
+    ];
+    (d.processes || []).forEach(function (p) { lines.push(p.name + ' (' + p.pid + '): ' + Math.round(p.rssKb / 1024) + ' MB'); });
+    q('diag-out').textContent = lines.join('\n');
+  } catch (e) { q('diag-out').textContent = e.message; }
+}
+
+function copyDiagnostics() {
+  const text = q('diag-out').textContent;
+  try { navigator.clipboard.writeText(text); } catch (e) { /* the text stays there to select */ }
+}

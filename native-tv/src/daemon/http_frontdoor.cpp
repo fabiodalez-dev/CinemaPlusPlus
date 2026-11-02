@@ -1,4 +1,5 @@
 #include "daemon/http_frontdoor.hpp"
+#include <dirent.h>
 #include "daemon/app_elevation_store.hpp"
 #include "daemon/app_elevation_executor.hpp"
 #include "daemon/app_install_executor.hpp"
@@ -10946,6 +10947,76 @@ void HttpFrontDoor::ledStripAction(HttpExchange &exchange, const std::string &ac
     respond(200, response);
 }
 
+// One page of what Cinema++ is doing, for when something does not work: versions, the Home key,
+// the boot hook, the processes and their memory, and the state of every part of Home.
+void HttpFrontDoor::sendCinemaDiagnostics(HttpExchange &exchange) const {
+    const auto firstLine = [](const std::string &path) {
+        std::ifstream file(path.c_str());
+        std::string text;
+        std::getline(file, text);
+        while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back()))) text.pop_back();
+        return text;
+    };
+    const auto exists = [](const std::string &path) {
+        struct stat info = {};
+        return stat(path.c_str(), &info) == 0;
+    };
+    Json result = Json::object();
+    result.set("ok", Json::flag(true));
+    result.set("cinemapp", Json::text(firstLine(rootedSystemPath(systemRoot_, "/var/lib/tvweb/CINEMAPP_VERSION"))));
+    result.set("nativetv", Json::text(firstLine(rootedSystemPath(systemRoot_, "/var/lib/tvweb/VERSION"))));
+    // What the remote's Home key opens, from LG Input Hook's bindings.
+    std::ifstream keys(rootedSystemPath(systemRoot_, "/home/root/.config/lginputhook/keybinds.json").c_str());
+    std::stringstream keyText;
+    keyText << keys.rdbuf();
+    const Json home = Json::parse(keyText.str())["773"];
+    result.set("homeKey", Json::text(home["action"].string() == "exec" ? home["command"].string()
+                                                                       : home["id"].string("LG Home")));
+    result.set("bootHook", Json::flag(exists(rootedSystemPath(systemRoot_, "/var/lib/webosbrew/init.d/57-cinemapp-service"))));
+    result.set("cinemaWeb", Json::flag(exists(rootedSystemPath(
+        systemRoot_, "/media/developer/apps/usr/palm/applications/org.webosbrew.lounge.launcher/appinfo.json"))));
+    // The processes of Cinema++ and their resident memory.
+    Json processes = Json::array();
+    if (DIR *proc = opendir(rootedSystemPath(systemRoot_, "/proc").c_str())) {
+        while (const dirent *entry = readdir(proc)) {
+            const std::string pid = entry->d_name;
+            if (pid.empty() || !std::isdigit(static_cast<unsigned char>(pid[0]))) continue;
+            const std::string name = firstLine(rootedSystemPath(systemRoot_, "/proc/" + pid + "/comm"));
+            if (name.compare(0, 7, "nativet") != 0) continue;
+            std::ifstream status(rootedSystemPath(systemRoot_, "/proc/" + pid + "/status").c_str());
+            std::string line;
+            long rss = 0;
+            while (std::getline(status, line))
+                if (line.compare(0, 6, "VmRSS:") == 0) rss = std::strtol(line.c_str() + 6, nullptr, 10);
+            Json process = Json::object();
+            process.set("name", Json::text(name));
+            process.set("pid", Json::numeric(std::atof(pid.c_str())));
+            process.set("rssKb", Json::numeric(static_cast<double>(rss)));
+            processes.add(process);
+        }
+        closedir(proc);
+    }
+    result.set("processes", processes);
+    std::ifstream meminfo(rootedSystemPath(systemRoot_, "/proc/meminfo").c_str());
+    std::string line;
+    while (std::getline(meminfo, line))
+        if (line.compare(0, 13, "MemAvailable:") == 0)
+            result.set("memAvailableKb", Json::numeric(std::atof(line.c_str() + 13)));
+    const Json jellyfin = homeJellyfin_.feed();
+    result.set("jellyfin", Json::text(jellyfin["state"].string("unconfigured")));
+    const Json weather = homeWeather_.feed();
+    result.set("weather", Json::text(weather["state"].string()));
+    const Json music = ambientMusic_.state();
+    result.set("music", Json::text(!music["enabled"].boolean() ? "off" : music["playing"].boolean() ? "playing" : "on"));
+    result.set("live", liveTv_.state());
+    result.set("update", cinemaUpdate_.status());
+    (void)exchange.respond(200,
+                           {{"Content-Type", "application/json; charset=utf-8"},
+                            {"Cache-Control", "no-store"},
+                            {"X-Content-Type-Options", "nosniff"}},
+                           result.dump());
+}
+
 // Cinema++'s updates: GET the status (?check=1 asks GitHub again); POST {"action": "check"} or
 // {"action": "install"}, an admin route: the package installs as root.
 void HttpFrontDoor::handleCinemaUpdate(HttpExchange &exchange) const {
@@ -11897,6 +11968,23 @@ bool HttpFrontDoor::createBackup(Json &backup, const Json *settingsContext) cons
     backup = service::createSettingsBackup(
         utcIsoTimestamp(), model, version, backupConfig, lg["rows"],
         context["homeLayout"], apps);
+    // Cinema++'s own settings: the weather's place and the ambient music. The Jellyfin token and
+    // the wallpapers stay on the TV.
+    if (backup.isObject()) {
+        Json cinemapp = Json::object();
+        const Json weather = homeWeather_.feed();
+        Json weatherSettings = Json::object();
+        weatherSettings.set("enabled", weather["enabled"]);
+        weatherSettings.set("units", weather["units"]);
+        weatherSettings.set("place", weather["place"]);
+        cinemapp.set("weather", weatherSettings);
+        const Json music = ambientMusic_.state();
+        Json musicSettings = Json::object();
+        for (const char *key : {"enabled", "source", "volume", "shuffle", "tracks"})
+            musicSettings.set(key, music[key]);
+        cinemapp.set("music", musicSettings);
+        backup.set("cinemapp", cinemapp);
+    }
     return backup.isObject();
 }
 
@@ -15973,7 +16061,18 @@ void HttpFrontDoor::handleBackupRestore(HttpExchange &exchange, const std::strin
             std::chrono::system_clock::now().time_since_epoch()).count());
     };
 
-    const BackupRestoreOutcome outcome = restoreBackup(deps, Json::parse(body));
+    const Json restoring = Json::parse(body);
+    const BackupRestoreOutcome outcome = restoreBackup(deps, restoring);
+    // Cinema++'s own settings, when the backup has them (see createSettingsBackup's caller).
+    if (outcome.status >= 200 && outcome.status < 300) {
+        const Json cinemapp = restoring["backup"].isObject() ? restoring["backup"]["cinemapp"]
+                                                             : restoring["cinemapp"];
+        std::string ignored;
+        if (cinemapp["weather"].isObject())
+            (void)homeWeather_.configure(cinemapp["weather"], ignored);
+        if (cinemapp["music"].isObject())
+            (void)ambientMusic_.configure(cinemapp["music"], ignored);
+    }
     (void)exchange.respond(outcome.status,
                            {{"Content-Type", "application/json; charset=utf-8"},
                             {"Cache-Control", "no-store"},
@@ -18552,6 +18651,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/jellyfin/image" && request.method == "GET") {
         sendHomeJellyfinImage(exchange);
+        return;
+    }
+    if (request.uri == "/api/cinemapp/diagnostics" && request.method == "GET") {
+        sendCinemaDiagnostics(exchange);
         return;
     }
     if (request.uri == "/api/cinemapp/update") {

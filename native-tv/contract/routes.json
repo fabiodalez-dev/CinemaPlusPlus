@@ -675,6 +675,15 @@
       "notes": "The daemon validates open/close actions against the current recent list. Close operations stop running native or web apps, confirm exit with retries before removing selected cards, and preserve newly added or Home cards. Node retains standalone and startup-fallback handling."
     },
     {
+      "paths": ["/api/cinemapp/diagnostics"],
+      "methods": ["GET"],
+      "auth": "token",
+      "csrf": "read-only",
+      "bodyLimit": {"max": 0, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Cinema++ at a glance: versions, the Home key binding, the boot hook, its processes and memory, and the state of Jellyfin, weather, music, live TV and updates. No tokens."
+    },
+    {
       "paths": ["/api/cinemapp/update"],
       "methods": ["GET", "POST"],
       "auth": "token",

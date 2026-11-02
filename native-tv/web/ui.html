@@ -2718,6 +2718,15 @@
             <button type="button" class="btn btn-filled" id="btn-update-install" onclick="updateAct('install')" data-t="update.install" hidden>Install</button>
           </div>
         </div>
+        <div class="card" style="--p:2;--t:4;--d:12">
+          <h2 data-t="diag.title">Diagnostics</h2>
+          <p class="sub" data-t="diag.desc">What Cinema++ is doing on the TV, to read or to copy when something does not work.</p>
+          <pre class="sub" id="diag-out" style="white-space:pre-wrap;max-height:20em;overflow:auto"></pre>
+          <div class="setting-row">
+            <button type="button" class="btn btn-tonal" onclick="loadDiagnostics()" data-t="diag.refresh">Refresh</button>
+            <button type="button" class="btn btn-tonal" onclick="copyDiagnostics()" data-t="diag.copy">Copy</button>
+          </div>
+        </div>
 <article class="card" style="--p:2;--t:4;--d:12">
 <div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-dns"/></svg></span><h2 data-t="server.nativetv" translate="no">Native Tv</h2></div>
 <div class="prot-table">
