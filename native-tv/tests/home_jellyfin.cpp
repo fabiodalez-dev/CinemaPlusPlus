@@ -118,6 +118,18 @@ int main() {
         check(page["total"].number() == 250 && page["start"].number() == 120 && page["enabled"].boolean(), "page facts");
         page = music.music("#", "", 0);
         check(musicUrl.find("NameLessThan=A") != std::string::npos, "# is what comes before A");
+        page = music.music("n", "", 0, "artists");
+        check(musicUrl.find("/Artists/AlbumArtists?userId=") != std::string::npos &&
+                  musicUrl.find("NameStartsWith=N") != std::string::npos && musicUrl.find("SortBy=SortName") != std::string::npos,
+              "the album artists of a letter");
+        page = music.music("n", "", 0, "artists", "a6557735909faab24af442ad158b72a1");
+        check(musicUrl.find("ArtistIds=a6557735909faab24af442ad158b72a1") != std::string::npos &&
+                  musicUrl.find("IncludeItemTypes=MusicAlbum") != std::string::npos &&
+                  musicUrl.find("SortBy=ProductionYear") != std::string::npos && musicUrl.find("NameStartsWith") == std::string::npos,
+              "an artist's albums, by year, whatever the letter");
+        musicUrl.clear();
+        page = music.music("", "", 0, "albums", "../x");
+        check(musicUrl.empty() && page["items"].size() == 0, "an artist id that is not one asks nothing");
         page = music.music("", "bj rk", 0);
         check(musicUrl.find("SearchTerm=bj%20rk") != std::string::npos && musicUrl.find("Audio") != std::string::npos &&
                   musicUrl.find("NameStartsWith") == std::string::npos,

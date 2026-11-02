@@ -42,7 +42,10 @@ class HomeJellyfin {
     // albums, songs and artists that match it. {"enabled", "items", "total", "start"}; `start`
     // pages through them, kMusicPage at a time.
     static constexpr int kMusicPage = 120;
-    Json music(const std::string &letter, const std::string &query, int start);
+    // `view` "artists" lists the album artists instead of the albums; `artist` (an id) lists that
+    // artist's albums, oldest first. A query searches albums, songs and artists whatever the view.
+    Json music(const std::string &letter, const std::string &query, int start, const std::string &view = "albums",
+               const std::string &artist = "");
 
     // Exposed for the tests.
     static Json normalizeItem(const Json &raw);

@@ -457,6 +457,18 @@ class EditorScreen final : public ScreenView {
         if (selected_ >= results_.size())
             return;
         const Json &item = results_[selected_].data;
+        if (music_ && item["type"].string() == "MusicArtist") {
+            // An artist: their albums on the Musica page, not the client's artist page (which may
+            // show none); Back there goes to the artists.
+            Json page = Json::object();
+            page.set("view", Json::text("artists"));
+            page.set("artist", item["id"]);
+            page.set("artistName", item["title"]);
+            page.set("zone", Json::text("grid"));
+            host.memory()["music.page"] = page;
+            host.open("tab:music");
+            return;
+        }
         if (results_[selected_].kind == "jellyfin") {
             Json body = Json::object();
             body.set("kind", Json::text("jellyfin"));

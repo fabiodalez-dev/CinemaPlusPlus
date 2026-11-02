@@ -19002,18 +19002,23 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
         return;
     }
     if (request.uri == "/api/home/jellyfin/music" && request.method == "GET") {
-        // The Musica page: albums by letter, or albums, songs and artists matching a query.
-        std::string letter, query, start;
+        // The Musica page: albums or artists by letter, an artist's albums, or a query's albums, songs and artists.
+        std::string letter, query, start, view, artist;
         (void)uniqueQueryParameter(request.query, "letter", letter);
         (void)uniqueQueryParameter(request.query, "q", query);
         (void)uniqueQueryParameter(request.query, "start", start);
+        (void)uniqueQueryParameter(request.query, "view", view);
+        (void)uniqueQueryParameter(request.query, "artist", artist);
         const bool startOk = start.empty() || (start.size() < 7 && start.find_first_not_of("0123456789") == std::string::npos);
-        if (letter.size() > 1 || query.size() > 120 || !startOk) {
+        const bool viewOk = view.empty() || view == "albums" || view == "artists";
+        const bool artistOk = artist.size() <= 64 && artist.find_first_not_of("0123456789abcdefABCDEF-") == std::string::npos;
+        if (letter.size() > 1 || query.size() > 120 || !startOk || !viewOk || !artistOk) {
             (void)exchange.respond(400, {{"Content-Type", "application/json"}},
                                    "{\"ok\":false,\"error\":\"bad query\"}");
             return;
         }
-        Json result = homeJellyfin_.music(letter, query, start.empty() ? 0 : std::stoi(start));
+        Json result = homeJellyfin_.music(letter, query, start.empty() ? 0 : std::stoi(start),
+                                                view.empty() ? "albums" : view, artist);
         result.set("ok", Json::flag(true));
         (void)exchange.respond(200, {{"Content-Type", "application/json"}}, result.dump());
         return;

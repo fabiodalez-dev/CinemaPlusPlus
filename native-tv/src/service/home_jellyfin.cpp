@@ -405,21 +405,29 @@ Json HomeJellyfin::search(const std::string &query) {
     return result;
 }
 
-Json HomeJellyfin::music(const std::string &letter, const std::string &query, int start) {
+Json HomeJellyfin::music(const std::string &letter, const std::string &query, int start, const std::string &view,
+                         const std::string &artist) {
     const Connection c = readConnection();
     Json result = Json::object();
     result.set("enabled", Json::flag(c.valid()));
     result.set("items", Json::array());
     result.set("total", Json::numeric(0));
     result.set("start", Json::numeric(start));
-    if (!c.valid() || start < 0) return result;
-    std::string path = "/Users/" + c.userId + "/Items?Recursive=true&SortBy=SortName&SortOrder=Ascending&" +
-                       std::string(kFields) + "&StartIndex=" + std::to_string(start) +
-                       "&Limit=" + std::to_string(kMusicPage);
+    if (!c.valid() || start < 0 || (!artist.empty() && !hexId(artist))) return result;
+    const std::string page = "&" + std::string(kFields) + "&StartIndex=" + std::to_string(start) +
+                             "&Limit=" + std::to_string(kMusicPage);
+    std::string path;
     if (query.size() >= 2)
-        path += "&IncludeItemTypes=MusicAlbum,Audio,MusicArtist&SearchTerm=" + urlEncode(query);
+        path = "/Users/" + c.userId + "/Items?Recursive=true&SortBy=SortName&SortOrder=Ascending" + page +
+               "&IncludeItemTypes=MusicAlbum,Audio,MusicArtist&SearchTerm=" + urlEncode(query);
+    else if (!artist.empty())
+        path = "/Users/" + c.userId + "/Items?Recursive=true&SortBy=ProductionYear,SortName&SortOrder=Ascending" +
+               page + "&IncludeItemTypes=MusicAlbum&ArtistIds=" + artist;
     else {
-        path += "&IncludeItemTypes=MusicAlbum";
+        // The album artists, not every name on a song: the ones a library is browsed by.
+        path = view == "artists" ? "/Artists/AlbumArtists?userId=" + c.userId + "&SortBy=SortName&SortOrder=Ascending" + page
+                                 : "/Users/" + c.userId + "/Items?Recursive=true&SortBy=SortName&SortOrder=Ascending" +
+                                       page + "&IncludeItemTypes=MusicAlbum";
         if (letter == "#") path += "&NameLessThan=A";
         else if (letter.size() == 1 && std::isalpha(static_cast<unsigned char>(letter[0])))
             path += "&NameStartsWith=" + std::string(1, static_cast<char>(std::toupper(static_cast<unsigned char>(letter[0]))));

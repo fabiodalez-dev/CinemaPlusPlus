@@ -159,7 +159,8 @@ std::string legacyRoute(Operation operation, const Json &arguments) {
     case Operation::JellyfinMusic:
         return "/api/home/jellyfin/music?letter=" + encode(arguments["letter"].string()) +
                "&q=" + encode(arguments["query"].string()) +
-               "&start=" + std::to_string(static_cast<long>(arguments["start"].number(0)));
+               "&start=" + std::to_string(static_cast<long>(arguments["start"].number(0))) +
+               "&view=" + encode(arguments["view"].string("albums")) + "&artist=" + encode(arguments["artist"].string());
     case Operation::AdminUnlock:
         return "/api/admin/unlock";
     case Operation::None:

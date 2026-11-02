@@ -1,12 +1,14 @@
-// Musica: the Jellyfin music library as a grid of album covers, in name order, with a strip of
-// letters over it and a Search button that opens the search on the music alone (albums, songs,
-// artists). Home's Musica tab opens it in place of a row that scrolls sideways: with hundreds of
-// albums a row cannot be searched by eye.
+// Musica: the Jellyfin music library as a grid of album covers or of artists, in name order, with a
+// strip over it: Search (albums, songs and artists), Albums and Artists, and the letters. Home's
+// Musica tab opens it in place of a row that scrolls sideways: with hundreds of albums a row cannot
+// be searched by eye.
 //
-// The albums come from the daemon a page at a time (kMusicPage); the next page is asked for when
-// the focus nears the end of the ones that are here. OK on a letter shows the albums that start
-// with it ("#" the ones before A, "Tutti" all of them); CH+ and CH− in the grid step to the next
-// and the previous letter. OK on an album opens it in the Jellyfin client, as Home's cards do.
+// The items come from the daemon a page at a time (kMusicPage); the next page is asked for when
+// the focus nears the end of the ones that are here. OK on a letter shows the albums or artists
+// that start with it ("#" the ones before A); OK on Albums or Artists switches to them, or, already
+// there, shows them all again. CH+ and CH− in the grid step to the next and the previous letter.
+// OK on an album opens it in the Jellyfin client, as Home's cards do; OK on an artist shows the
+// artist's albums here (the clients' artist pages may show none), and Back goes back to the artists.
 #include "domain/say.hpp"
 #include "ui/application.hpp"
 #include "ui/dashboard_screens.hpp"
@@ -26,12 +28,13 @@ constexpr const char *kChannel = "music:library", *kMemory = "music.page";
 constexpr size_t kColumns = 7;
 constexpr float kTitleY = 150, kStripY = 236, kChipH = 56, kGridTop = 336, kCover = 224, kGapX = 32,
                 kPitchY = kCover + 40, kGridBottom = 1080;
-constexpr float kSearchW = 176, kAllW = 120, kLetterW = 48, kLetterGap = 6;
+constexpr float kSearchW = 156, kViewW[2] = {124, 132}, kLetterW = 44, kLetterGap = 4;
+constexpr size_t kFirstLetter = 3;
 
-// The strip: Search, All, "#", then A to Z.
+// The strip: Search, Albums, Artists, "#", then A to Z.
 const std::vector<std::string> &letters() {
     static const std::vector<std::string> all = [] {
-        std::vector<std::string> list = {"search", "", "#"};
+        std::vector<std::string> list = {"search", "albums", "artists", "#"};
         for (char c = 'A'; c <= 'Z'; ++c)
             list.push_back(std::string(1, c));
         return list;
@@ -58,6 +61,10 @@ class MusicScreen final : public ScreenView {
         auto &memory = host.memory();
         const Json saved = memory.count(kMemory) ? memory[kMemory] : Json();
         letter_ = saved["letter"].string();
+        artists_ = saved["view"].string() == "artists";
+        artist_ = saved["artist"].string();
+        artistName_ = saved["artistName"].string();
+        artistAt_ = static_cast<size_t>(saved["artistAt"].number(0));
         const size_t at = static_cast<size_t>(saved["focus"].number(0));
         Motion &motion = host.motion();
         motion.play("music:E", Tween(1, 0, ms::base, easing(kit::motion::ease::out), kit::motion::stagger::pageBase));
@@ -65,8 +72,22 @@ class MusicScreen final : public ScreenView {
         load(host, 0);
         wanted_ = at;
         zone_ = saved["zone"].string() == "strip" ? Zone::Strip : Zone::Grid;
-        strip_ = indexOf(letter_);
+        strip_ = chosenChip();
         focusNow(host, true);
+    }
+    // Back on an artist's albums: the artists again, on the one that was open.
+    bool back(ScreenHost &host) override {
+        if (artist_.empty())
+            return false;
+        artist_.clear();
+        artistName_.clear();
+        albums_.clear();
+        total_ = 0;
+        load(host, 0);
+        wanted_ = artistAt_;
+        zone_ = Zone::Grid;
+        focusNow(host, false);
+        return true;
     }
     void leave(ScreenHost &host) override {
         remember(host);
@@ -116,10 +137,14 @@ class MusicScreen final : public ScreenView {
             albums_.push_back(item);
         total_ = static_cast<size_t>(data["total"].number(0));
         loaded_ = true;
-        if (wanted_ < albums_.size()) {
-            selected_ = wanted_;
-            wanted_ = 0;
+        // The focus to come back to is further on: the pages up to it first.
+        if (wanted_ >= albums_.size() && albums_.size() < total_ && !data["items"].items().empty()) {
+            load(host, albums_.size());
+            return;
         }
+        if (wanted_ < albums_.size())
+            selected_ = wanted_;
+        wanted_ = 0;
         selected_ = std::min(selected_, albums_.empty() ? 0 : albums_.size() - 1);
         if (albums_.empty() && zone_ == Zone::Grid)
             zone_ = Zone::Strip;
@@ -144,7 +169,8 @@ class MusicScreen final : public ScreenView {
         scene.pushTransform(Transform::translate(0, 24 * enter));
         const float width = kit::canvas::width - 2 * kit::canvas::safeX;
         paint.glyphs.text(scene, {kit::canvas::safeX, kTitleY, width / 2, kit::type::headline.line},
-                          msg("tv.music.title", "Your music"), kit::type::headline, kit::color::onSurface);
+                          artist_.empty() ? msg("tv.music.title", "Your music") : artistName_, kit::type::headline,
+                          kit::color::onSurface);
         paint.glyphs.text(scene, {kit::canvas::safeX + width / 2, kTitleY + 20, width / 2, kit::type::body.line},
                           countText(), kit::type::body, kit::color::onSurface2, Node::Align::Right);
         drawStrip(host, paint);
@@ -156,6 +182,8 @@ class MusicScreen final : public ScreenView {
     Json snapshot() const override {
         Json value = Json::object();
         value.set("letter", Json::text(letter_));
+        value.set("view", Json::text(artists_ ? "artists" : "albums"));
+        value.set("artist", Json::text(artistName_));
         value.set("albums", Json::numeric(static_cast<double>(albums_.size())));
         value.set("total", Json::numeric(static_cast<double>(total_)));
         value.set("zone", Json::text(zone_ == Zone::Strip ? "strip" : "grid"));
@@ -166,21 +194,25 @@ class MusicScreen final : public ScreenView {
   private:
     enum class Zone { Strip, Grid };
 
-    static size_t indexOf(const std::string &letter) {
+    // The chip that shows what the grid holds: the letter, or Albums or Artists for all of them.
+    size_t chosenChip() const {
         const auto &list = letters();
-        for (size_t i = 1; i < list.size(); ++i)
-            if (list[i] == letter)
+        for (size_t i = kFirstLetter; i < list.size(); ++i)
+            if (list[i] == letter_)
                 return i;
-        return 1;
+        return artists_ ? 2 : 1;
     }
     static Rect chip(size_t index) {
         float x = kit::canvas::safeX;
         if (index == 0)
             return {x, kStripY, kSearchW, kChipH};
-        x += kSearchW + 16;
+        x += kSearchW + 14;
         if (index == 1)
-            return {x, kStripY, kAllW, kChipH};
-        x += kAllW + 12 + static_cast<float>(index - 2) * (kLetterW + kLetterGap);
+            return {x, kStripY, kViewW[0], kChipH};
+        x += kViewW[0] + 6;
+        if (index == 2)
+            return {x, kStripY, kViewW[1], kChipH};
+        x += kViewW[1] + 14 + static_cast<float>(index - kFirstLetter) * (kLetterW + kLetterGap);
         return {x, kStripY, kLetterW, kChipH};
     }
     static Rect cover(size_t index, float scroll) {
@@ -197,6 +229,8 @@ class MusicScreen final : public ScreenView {
         host.services().cancel(kChannel);
         Json arguments = Json::object();
         arguments.set("letter", Json::text(letter_));
+        arguments.set("view", Json::text(artists_ ? "artists" : "albums"));
+        arguments.set("artist", Json::text(artist_));
         arguments.set("start", Json::numeric(static_cast<double>(start)));
         generation_ = host.services().read(kChannel, Operation::JellyfinMusic, arguments);
         if (!generation_)
@@ -222,9 +256,10 @@ class MusicScreen final : public ScreenView {
                 return true;
             zone_ = Zone::Grid;
             selected_ = std::min(selected_, albums_.size() - 1);
-        } else if (key == Key::Ok)
-            choose(host);
-        else if (key == Key::Up)
+        } else if (key == Key::Ok) {
+            choose(host); // the search route destroys this screen: nothing after it
+            return true;
+        } else if (key == Key::Up)
             return false; // the bar
         else if (key != Key::Left && key != Key::Right)
             return false;
@@ -255,11 +290,13 @@ class MusicScreen final : public ScreenView {
             return true;
         } else if (key == Key::PageDown || key == Key::PageUp) {
             // CH+ and CH−: the next or the previous letter, without going up to the strip.
-            size_t at = indexOf(letter_);
+            const size_t at = std::max(chosenChip(), kFirstLetter - 1);
             if (key == Key::PageDown && at + 1 < letters().size())
                 strip_ = at + 1;
-            else if (key == Key::PageUp && at > 1)
+            else if (key == Key::PageUp && at > kFirstLetter)
                 strip_ = at - 1;
+            else if (key == Key::PageUp && at == kFirstLetter)
+                strip_ = artists_ ? 2 : 1; // before "#": all of them
             else
                 return true;
             choose(host);
@@ -271,21 +308,27 @@ class MusicScreen final : public ScreenView {
         return true;
     }
 
-    // OK on the strip: the search, or the albums of that letter.
+    // OK on the strip: the search, Albums or Artists (all of them when already there), or the
+    // albums or artists of that letter.
     void choose(ScreenHost &host) {
         if (strip_ == 0) {
             remember(host);
             host.open("search:music");
             return;
         }
-        const std::string letter = letters()[strip_];
-        if (letter == letter_ && loaded_) {
+        const bool view = strip_ < kFirstLetter;
+        const bool artists = view ? strip_ == 2 : artists_;
+        const std::string letter = view ? (artists == artists_ ? std::string() : letter_) : letters()[strip_];
+        if (letter == letter_ && artists == artists_ && artist_.empty() && loaded_) {
             if (!albums_.empty())
                 zone_ = Zone::Grid;
             focusNow(host, false);
             return;
         }
         letter_ = letter;
+        artists_ = artists;
+        artist_.clear();
+        artistName_.clear();
         albums_.clear();
         total_ = 0;
         load(host, 0);
@@ -295,6 +338,19 @@ class MusicScreen final : public ScreenView {
     void open(ScreenHost &host) {
         if (selected_ >= albums_.size())
             return;
+        if (artists_ && artist_.empty()) {
+            // An artist: their albums, here.
+            artistAt_ = selected_;
+            artist_ = albums_[selected_]["id"].string();
+            artistName_ = albums_[selected_]["title"].string();
+            albums_.clear();
+            total_ = 0;
+            load(host, 0);
+            zone_ = Zone::Grid;
+            host.motion().set("music:gy", 0);
+            focusNow(host, false);
+            return;
+        }
         remember(host);
         Json body = Json::object();
         body.set("kind", Json::text("jellyfin"));
@@ -309,6 +365,10 @@ class MusicScreen final : public ScreenView {
     void remember(ScreenHost &host) {
         Json saved = Json::object();
         saved.set("letter", Json::text(letter_));
+        saved.set("view", Json::text(artists_ ? "artists" : "albums"));
+        saved.set("artist", Json::text(artist_));
+        saved.set("artistName", Json::text(artistName_));
+        saved.set("artistAt", Json::numeric(static_cast<double>(artistAt_)));
         saved.set("focus", Json::numeric(static_cast<double>(selected_)));
         saved.set("zone", Json::text(zone_ == Zone::Strip ? "strip" : "grid"));
         host.memory()[kMemory] = saved;
@@ -346,6 +406,8 @@ class MusicScreen final : public ScreenView {
             return std::string();
         Json vars = Json::object();
         vars.set("n", Json::text(std::to_string(total_)));
+        if (artists_ && artist_.empty())
+            return total_ == 1 ? msg("tv.music.oneArtist", "1 artist") : msg("tv.music.artists", "{n} artists", vars);
         return total_ == 1 ? msg("tv.music.oneAlbum", "1 album") : msg("tv.music.albums", "{n} albums", vars);
     }
 
@@ -353,13 +415,14 @@ class MusicScreen final : public ScreenView {
         Motion &motion = host.motion();
         Scene &scene = paint.scene;
         const auto &list = letters();
-        const size_t chosen = indexOf(letter_);
+        const size_t chosen = chosenChip();
         for (size_t i = 0; i < list.size(); ++i) {
             const Rect rest = chip(i);
             const float focus = static_cast<float>(motion.value("music:s:" + std::to_string(i)));
             const float scale = kit::focus::scaleAt(1.12f, focus);
             scene.pushTransform(kit::focus::transformAt(rest, scale));
-            const bool on = i == chosen;
+            // The view's chip stays lit beside the letter it is filtered by.
+            const bool on = i == chosen || (i == (artists_ ? 2u : 1u) && chosen >= kFirstLetter);
             Color fill = on ? kit::color::accent : kit::focus::withAlpha(kit::color::surface2, .9f);
             Node &base = scene.shape(rest, fill, kit::radius::pill);
             if (focus > 0)
@@ -374,7 +437,10 @@ class MusicScreen final : public ScreenView {
             } else
                 paint.glyphs.text(scene, {rest.x, rest.y + (kChipH - kit::type::labelL.line) / 2, rest.w,
                                           kit::type::labelL.line},
-                                  i == 1 ? msg("tv.music.all", "All") : list[i], kit::type::labelL, ink,
+                                  i == 1   ? msg("tv.music.viewAlbums", "Albums")
+                                  : i == 2 ? msg("tv.music.viewArtists", "Artists")
+                                           : list[i],
+                                  kit::type::labelL, ink,
                                   Node::Align::Center);
             scene.hits.push_back({rest, "music:strip:" + std::to_string(i)});
             scene.popTransform();
@@ -403,6 +469,9 @@ class MusicScreen final : public ScreenView {
                 spinner.phase = kit::spinnerPhase(motion, "music:spin");
                 kit::loadingIndicator(paint, spinner);
                 return;
+            } else if (artists_ && artist_.empty()) {
+                box.title = msg("tv.music.noArtists", "No artists here");
+                box.message = msg("tv.music.noneBody", "Choose another letter, or search.");
             } else {
                 box.title = msg("tv.music.none", "No albums here");
                 box.message = msg("tv.music.noneBody", "Choose another letter, or search.");
@@ -434,7 +503,10 @@ class MusicScreen final : public ScreenView {
                 const std::string art = album["cover"].isString() ? album["cover"].string() : album["image"].string();
                 card.image = art.empty() ? "" : "jellyfin:" + art + ":640";
                 card.title = album["title"].string();
-                card.subtitle = album["artist"].string();
+                if (!artists_ || !artist_.empty())
+                    card.subtitle = artist_.empty() ? album["artist"].string()
+                                    : album["year"].isNumber() ? std::to_string(static_cast<int>(album["year"].number()))
+                                                               : std::string();
                 card.focus = focus;
                 kit::card(paint, card);
             }
@@ -444,7 +516,9 @@ class MusicScreen final : public ScreenView {
     ScreenHost *host_ = nullptr;
     Zone zone_ = Zone::Grid;
     size_t strip_ = 1, selected_ = 0, wanted_ = 0, total_ = 0;
-    std::string letter_, focusId_;
+    std::string letter_, focusId_, artist_, artistName_;
+    size_t artistAt_ = 0;
+    bool artists_ = false;
     std::vector<Json> albums_;
     unsigned generation_ = 0;
     bool loaded_ = false, failed_ = false, unlinked_ = false, barWas_ = false;
