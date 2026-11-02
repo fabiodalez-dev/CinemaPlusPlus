@@ -2709,6 +2709,15 @@
             </div>
 </section>
       <section class="panel grid" id="serverpane" role="tabpanel" hidden>
+        <div class="card" style="--p:2;--t:4;--d:12">
+          <h2 data-t="update.title">Cinema++ updates</h2>
+          <p class="sub" data-t="update.desc">New versions come from Cinema++'s releases on GitHub. The TV checks the download against its SHA-256 before it installs it, then the service restarts by itself.</p>
+          <p class="sub" id="update-status" role="status"></p>
+          <div class="setting-row">
+            <button type="button" class="btn btn-tonal" onclick="updateAct('check')" data-t="update.check">Check now</button>
+            <button type="button" class="btn btn-filled" id="btn-update-install" onclick="updateAct('install')" data-t="update.install" hidden>Install</button>
+          </div>
+        </div>
 <article class="card" style="--p:2;--t:4;--d:12">
 <div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-dns"/></svg></span><h2 data-t="server.nativetv" translate="no">Native Tv</h2></div>
 <div class="prot-table">
@@ -4264,6 +4273,7 @@
     <script src="/assets/ui/jellyfin.js"></script>
     <script src="/assets/ui/weather.js"></script>
     <script src="/assets/ui/music.js"></script>
+    <script src="/assets/ui/cinemapp-update.js"></script>
     <script src="/assets/ui/mqtt.js"></script>
     <script src="/assets/ui/tools.js"></script>
     <script src="/assets/ui/tabs.js"></script>

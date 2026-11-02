@@ -23,12 +23,14 @@ class AmbientMusic {
   public:
     // One bus call: the first reply, or an invalid Json. Subscribe: replies until the end.
     using Call = std::function<Json(const std::string &uri, const Json &payload)>;
-    using Subscribe = std::function<void(const std::string &uri, const Json &payload,
-                                         std::function<void(const Json &)> onMessage)>;
+    // Returns the subscription's id, which Cancel ends.
+    using Subscribe = std::function<int(const std::string &uri, const Json &payload,
+                                        std::function<void(const Json &)> onMessage)>;
+    using Cancel = std::function<void(int id)>;
     using ListUsb = std::function<std::vector<std::string>()>;
 
     AmbientMusic(std::string dataRoot, std::string runDirectory, Call call = Call(),
-                 Subscribe subscribe = Subscribe(), ListUsb listUsb = ListUsb());
+                 Subscribe subscribe = Subscribe(), ListUsb listUsb = ListUsb(), Cancel cancel = Cancel());
     ~AmbientMusic();
     AmbientMusic(const AmbientMusic &) = delete;
     AmbientMusic &operator=(const AmbientMusic &) = delete;
@@ -60,6 +62,8 @@ class AmbientMusic {
     Call call_;
     Subscribe subscribe_;
     ListUsb listUsb_;
+    Cancel cancel_;
+    int subscription_ = -1; // the playing track's events
     std::unique_ptr<ambilight::NodeBus> bus_;
     std::mutex mutex_;
     std::condition_variable wake_, idle_;

@@ -39,6 +39,7 @@ if [ -z "$BASH_VERSION" ]; then
 fi
 
 FORCE_TELNET=""
+RELEASE=""        # --release=DIR: write a Cinema++ release there instead of installing
 APP_MODE=auto     # auto: add on a first install, leave an update alone
 NATIVE_BUILD=""
 for a in "$@"; do
@@ -49,6 +50,7 @@ for a in "$@"; do
     --app)        APP_MODE=yes ;;
     --no-app)     APP_MODE=no ;;
     --native-build=*) NATIVE_BUILD="${a#*=}" ;;
+    --release=*)  RELEASE="${a#*=}"; TV=release; PERSIST=""; APP_MODE=no ;;
     -*)           echo "unknown option: $a" >&2; exit 2 ;;
     *)            TV="$a" ;;
   esac
@@ -74,12 +76,14 @@ SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=accept-n
 [ -n "${NATIVETV_SSH_KEY:-}" ] && SSH_OPTS+=(-i "$NATIVETV_SSH_KEY" -o IdentitiesOnly=yes)
 [ -n "${NATIVETV_KNOWN_HOSTS:-}" ] && SSH_OPTS+=(-o "UserKnownHostsFile=$NATIVETV_KNOWN_HOSTS")
 STAGE=/var/lib/tvweb/.deploy     # on the TV; beside the install so moves are renames
+# A release is unpacked and installed by the TV itself (Settings > Updates).
+[ -n "$RELEASE" ] && STAGE=/var/lib/tvweb/.update
 
 FILES="tvwebctl 56-cinemapp-ledstrip 57-cinemapp-service cinemapp-home-key assets/ui.html assets/favicon.svg \
 assets/ui/theme.css assets/ui/ui.css assets/ui/i18n.js assets/ui/core.js assets/ui/theme.js assets/ui/format.js assets/ui/readouts.js \
 assets/ui/server.js assets/ui/controls.js assets/ui/privacy.js assets/ui/lgsettings.js assets/ui/game.js \
 assets/ui/system.js assets/ui/history.js assets/ui/ssh.js assets/ui/screentime.js assets/ui/apps.js assets/ui/install.js assets/ui/home.js assets/ui/tabs.js assets/ui/servicemenu.js \
-assets/ui/oled.js assets/ui/screensavers.js assets/ui/ledstrip.js assets/ui/jellyfin.js assets/ui/weather.js assets/ui/music.js assets/ui/mqtt.js assets/ui/tools.js assets/ui/search-aliases.js assets/ui/search.js assets/ui/main.js \
+assets/ui/oled.js assets/ui/screensavers.js assets/ui/ledstrip.js assets/ui/jellyfin.js assets/ui/weather.js assets/ui/music.js assets/ui/cinemapp-update.js assets/ui/mqtt.js assets/ui/tools.js assets/ui/search-aliases.js assets/ui/search.js assets/ui/main.js \
 assets/dashboard-app/appinfo.json assets/dashboard-app/packageinfo.json \
 assets/dashboard-app/install-app.sh \
 assets/dashboard-app/assets/icon80.png assets/dashboard-app/assets/icon130.png \
@@ -135,6 +139,7 @@ for f in $FILES; do
 done
 cp "$DIR/50-tvweb.sh" "$WORK/b/50-tvweb.sh"
 cp "$ROOT/VERSION" "$WORK/b/VERSION"   # what the Homebrew Channel installer compares with its own
+cp "$ROOT/CINEMAPP_VERSION" "$WORK/b/CINEMAPP_VERSION"   # Cinema++'s own, for its updates
 python3 "$ROOT/tools/runtime_payload.py" --build "$NATIVE_BUILD" --out "$WORK/b/native"
 # The native client, whole (executable, libraries, fonts, icons, licences and a
 # manifest of their hashes), in each app that runs it: the dashboard tile and
@@ -272,6 +277,23 @@ esac
 [ -n "\$doapp" ] && { sh "\$D/assets/dashboard-app/install-app.sh" install "\$D/assets/splash-app" 2>&1 || true; }
 EOF
 }
+
+# ---------------------------------------------------------------- a release
+# --release=DIR writes cinemapp-<version>.tar (the bundle and the script that
+# installs it) and cinemapp.manifest.json (its version and SHA-256) for a
+# GitHub release. The TV downloads both, checks the hash and runs the script.
+if [ -n "$RELEASE" ]; then
+  version=$(tr -d '[:space:]' < "$ROOT/CINEMAPP_VERSION")
+  mkdir -p "$RELEASE" "$WORK/r"
+  cp "$WORK/bundle.tar" "$WORK/r/bundle.tar"
+  install_script > "$WORK/r/install.sh"
+  ( cd "$WORK/r" && COPYFILE_DISABLE=1 tar --format=ustar -cf "$RELEASE/cinemapp-$version.tar" bundle.tar install.sh )
+  sha=$(shasum -a 256 "$RELEASE/cinemapp-$version.tar" | cut -d' ' -f1)
+  printf '{"id":"cinemapp","version":"%s","bundle":"cinemapp-%s.tar","sha256":"%s"}\n' \
+    "$version" "$version" "$sha" > "$RELEASE/cinemapp.manifest.json"
+  echo "release $version written to $RELEASE"
+  exit 0
+fi
 
 # ---------------------------------------------------------------- SSH
 use_ssh() {

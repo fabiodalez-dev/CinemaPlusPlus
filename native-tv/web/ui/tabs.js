@@ -132,7 +132,7 @@ function showTab(name) {
   if (overview) loadHdmiOnce();
   watchPolling(overview);
   if (APPS_PANE[name]) { loadApps(); loadCatalog(false); pollInstall(); loadRestoredApps(); }
-  if (name === 'server') { loadServerStatus(); loadTvApp(); loadSsh(); loadAdminPin(); }
+  if (name === 'server') { loadCinemaUpdate(); loadServerStatus(); loadTvApp(); loadSsh(); loadAdminPin(); }
   if (name === 'oledcare') loadOledCare();
   if (name === 'home') loadHome();
   gamePolling(name === 'game');

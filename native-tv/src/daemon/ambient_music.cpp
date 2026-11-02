@@ -75,11 +75,11 @@ Json AmbientMusic::builtinTracks() {
 }
 
 AmbientMusic::AmbientMusic(std::string dataRoot, std::string runDirectory, Call call, Subscribe subscribe,
-                           ListUsb listUsb)
+                           ListUsb listUsb, Cancel cancel)
     : path_((dataRoot.empty() ? std::string("/var/lib/tvweb") : dataRoot) + "/home-music.json"),
       runDirectory_(std::move(runDirectory)), call_(std::move(call)), subscribe_(std::move(subscribe)),
-      listUsb_(listUsb ? listUsb : ListUsb(usbTracks)) {
-    if (!call_ || !subscribe_) {
+      listUsb_(listUsb ? listUsb : ListUsb(usbTracks)), cancel_(std::move(cancel)) {
+    if (!call_ || !subscribe_ || !cancel_) {
         auto bus = [this]() -> ambilight::NodeBus & {
             if (!bus_) {
                 (void)mkdir(runDirectory_.c_str(), 0700);
@@ -91,8 +91,10 @@ AmbientMusic::AmbientMusic(std::string dataRoot, std::string runDirectory, Call 
             call_ = [bus](const std::string &uri, const Json &payload) { return bus().call(uri, payload, 8000); };
         if (!subscribe_)
             subscribe_ = [bus](const std::string &uri, const Json &payload, std::function<void(const Json &)> on) {
-                (void)bus().subscribe(uri, payload, on, []() {});
+                return bus().subscribe(uri, payload, on, []() {});
             };
+        if (!cancel_)
+            cancel_ = [bus](int id) { bus().cancel(id); };
     }
     std::ifstream file(path_.c_str());
     std::stringstream text;
@@ -138,7 +140,13 @@ void AmbientMusic::loop() {
         busy_ = false;
         if (jobs_.empty()) idle_.notify_all();
     }
-    // Closing: the music stops with the service.
+    // Closing: the music stops with the service, and its events with it.
+    if (subscription_ >= 0) {
+        lock.unlock();
+        cancel_(subscription_);
+        lock.lock();
+        subscription_ = -1;
+    }
     if (!mediaId_.empty()) {
         Json payload = Json::object();
         payload.set("mediaId", Json::text(mediaId_));
@@ -212,7 +220,7 @@ void AmbientMusic::playIndex(size_t index) {
     Json media = Json::object();
     media.set("mediaId", Json::text(id));
     // The end of the track, from the media service's own events, starts the next one.
-    subscribe_(std::string(kMedia) + "subscribe", media, [this, generation](const Json &event) {
+    subscription_ = subscribe_(std::string(kMedia) + "subscribe", media, [this, generation](const Json &event) {
         if (event.has("endOfStream") || event.has("error"))
             post([this, generation]() {
                 if (generation != generation_ || !shown_ || paused_) return;
@@ -231,6 +239,10 @@ void AmbientMusic::playIndex(size_t index) {
 
 // Runs on the worker.
 void AmbientMusic::stop(bool fade) {
+    if (subscription_ >= 0) {
+        cancel_(subscription_);
+        subscription_ = -1;
+    }
     std::string id;
     {
         std::lock_guard<std::mutex> lock(mutex_);

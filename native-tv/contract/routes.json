@@ -675,6 +675,15 @@
       "notes": "The daemon validates open/close actions against the current recent list. Close operations stop running native or web apps, confirm exit with retries before removing selected cards, and preserve newly added or Home cards. Node retains standalone and startup-fallback handling."
     },
     {
+      "paths": ["/api/cinemapp/update"],
+      "methods": ["GET", "POST"],
+      "auth": "token",
+      "csrf": "application/json content type and same-origin Origin/Host comparison when Origin is present; POST is an admin route (admin PIN)",
+      "bodyLimit": {"max": 256, "unit": "bytes"},
+      "owner": "native",
+      "notes": "Cinema++'s own updates from its GitHub releases: the manifest names the version and the package's SHA-256; install downloads, checks, unpacks and runs the package's install script detached."
+    },
+    {
       "paths": ["/api/music"],
       "methods": ["GET", "POST"],
       "auth": "token",

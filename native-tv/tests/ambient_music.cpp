@@ -24,7 +24,7 @@ int main() {
     const std::string dir = mkdtemp(pattern);
     std::vector<std::string> calls;
     std::function<void(const Json &)> ended;
-    int loads = 0;
+    int loads = 0, subscriptions = 0, cancelled = 0;
     {
         AmbientMusic music(
             dir, dir + "/run",
@@ -34,8 +34,12 @@ int main() {
                     return Json::parse("{\"mediaId\":\"m" + std::to_string(++loads) + "\",\"returnValue\":true}");
                 return Json::parse(R"({"returnValue":true})");
             },
-            [&](const std::string &, const Json &, std::function<void(const Json &)> on) { ended = on; },
-            []() { return std::vector<std::string>{"/tmp/usb/sda/sda1/lounge/music/rain.mp3"}; });
+            [&](const std::string &, const Json &, std::function<void(const Json &)> on) {
+                ended = on;
+                return ++subscriptions;
+            },
+            []() { return std::vector<std::string>{"/tmp/usb/sda/sda1/lounge/music/rain.mp3"}; },
+            [&](int) { ++cancelled; });
 
         // Off by default: Home shows, nothing plays.
         music.home(true);
@@ -65,6 +69,7 @@ int main() {
         music.home(false);
         music.settle();
         check(!music.state()["playing"].boolean() && calls.back().find("unload") == 0, "stopped off Home");
+        check(cancelled == subscriptions, "every track's events cancelled");
 
         // USB source.
         check(music.configure(Json::parse(R"({"source":"usb"})"), error), "usb");

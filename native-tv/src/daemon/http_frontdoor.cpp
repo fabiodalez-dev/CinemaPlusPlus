@@ -379,7 +379,7 @@ bool adminRoute(const HttpRequest &request) {
     const std::string &uri = request.uri;
     return uri == "/api/apps/uninstall" || uri == "/api/ssh" || uri == "/api/services/toggle" ||
            uri == "/api/backup" || uri == "/api/settings" || uri == "/api/admin/pin" ||
-           uri == "/api/jellyfin/link" ||
+           uri == "/api/jellyfin/link" || uri == "/api/cinemapp/update" ||
            uri.compare(0, 18, "/api/apps/install/") == 0;
 }
 
@@ -1772,6 +1772,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       homeWeather_(dataRoot_),
       liveTv_(rootedSystemPath(systemRoot, "/run/nativetv-live")),
       ambientMusic_(dataRoot_, rootedSystemPath(systemRoot, "/run/nativetv-music")),
+      cinemaUpdate_(rootedSystemPath(systemRoot, "/var/lib/tvweb")),
       homeImageProxy_(dataRoot_),
       configPath_(std::move(configPath)), hdmiSeenPath_(dataFilePath(dataRoot_, "hdmi_seen")),
       lastAppPath_(dataFilePath(dataRoot_, "last_app.json")),
@@ -10945,6 +10946,71 @@ void HttpFrontDoor::ledStripAction(HttpExchange &exchange, const std::string &ac
     respond(200, response);
 }
 
+// Cinema++'s updates: GET the status (?check=1 asks GitHub again); POST {"action": "check"} or
+// {"action": "install"}, an admin route: the package installs as root.
+void HttpFrontDoor::handleCinemaUpdate(HttpExchange &exchange) const {
+    const HttpRequest &request = exchange.request();
+    const auto respond = [&exchange](int status, const Json &payload) {
+        (void)exchange.respond(status,
+                               {{"Content-Type", "application/json; charset=utf-8"},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               payload.dump());
+    };
+    if (request.method == "GET") {
+        std::string checkNow;
+        if (uniqueQueryParameter(request.query, "check", checkNow) && checkNow == "1")
+            cinemaUpdate_.check();
+        Json status = cinemaUpdate_.status();
+        status.set("ok", Json::flag(true));
+        respond(200, status);
+        return;
+    }
+    Json failure = Json::object();
+    failure.set("ok", Json::flag(false));
+    if (request.method != "POST") {
+        failure.set("error", Json::text("method not allowed"));
+        respond(405, failure);
+        return;
+    }
+    if (rejectCrossSitePost(exchange))
+        return;
+    if (!exchange.setBodyLimit(256)) {
+        sendSetupError(exchange, 413, "request body too large", true);
+        return;
+    }
+    std::string body;
+    char buffer[256];
+    for (;;) {
+        const int count = exchange.readBody(buffer, sizeof(buffer));
+        if (count == 0)
+            break;
+        if (count < 0) {
+            sendSetupError(exchange, 400, "invalid request body", true);
+            return;
+        }
+        body.append(buffer, static_cast<size_t>(count));
+    }
+    const std::string action = Json::parse(body)["action"].string();
+    if (action == "check") {
+        cinemaUpdate_.check();
+    } else if (action == "install") {
+        std::string error;
+        if (!cinemaUpdate_.install(error)) {
+            failure.set("error", Json::text(say::msg("cinemapp.update.nothing", "Nothing newer to install")));
+            respond(400, failure);
+            return;
+        }
+    } else {
+        failure.set("error", Json::text("action expected"));
+        respond(400, failure);
+        return;
+    }
+    Json status = cinemaUpdate_.status();
+    status.set("ok", Json::flag(true));
+    respond(200, status);
+}
+
 // Ambient music on Home: GET the settings and what plays; POST settings from the dashboard, or
 // {"action": "home", "shown"} / "next" / "toggle" from the TV's own client.
 void HttpFrontDoor::handleMusic(HttpExchange &exchange) const {
@@ -18486,6 +18552,10 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/home/jellyfin/image" && request.method == "GET") {
         sendHomeJellyfinImage(exchange);
+        return;
+    }
+    if (request.uri == "/api/cinemapp/update") {
+        handleCinemaUpdate(exchange);
         return;
     }
     if (request.uri == "/api/music") {
