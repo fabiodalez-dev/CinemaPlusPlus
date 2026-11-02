@@ -1,6 +1,6 @@
 # Parità con Cinema
 
-Ogni funzione di Cinema (app web, 0.3.9) e dove sta in Cinema++. Fonte: lettura completa del codice di Cinema (`src/js`, `scripts`), 1° novembre 2026; aggiornato il 2 novembre 2026.
+Ogni funzione di Cinema (app web, 0.3.9) e dove sta in Cinema++. Fonte: lettura completa del codice di Cinema (`src/js`, `scripts`), 1° novembre 2026; aggiornato il 2 novembre 2026 (release 0.1.0).
 
 Legenda: ✅ fatto · 🟡 c'è in Native Tv, da adattare · ⬜ da fare.
 
@@ -11,7 +11,7 @@ Legenda: ✅ fatto · 🟡 c'è in Native Tv, da adattare · ⬜ da fare.
 - ✅ Orologio, data in italiano, meteo e avviso quando Jellyfin non risponde
 - ✅ Riquadro grande con titolo, dati, descrizione e copertina della libreria
 - ✅ Sfondo dalla libreria (backdrop del titolo a fuoco); righe che svaniscono sotto le schede
-- ⬜ Riga di scorciatoie quando Jellyfin non ha titoli
+- ✅ Riga «Le tue scorciatoie» quando il feed è vuoto (Jellyfin, YouTube, TV e HDMI, Tutte le app)
 - ⬜ Tasto giallo: Cinema ↔ vista essenziale (il giallo ora mette in pausa la musica)
 
 ## Jellyfin
@@ -22,7 +22,7 @@ Legenda: ✅ fatto · 🟡 c'è in Native Tv, da adattare · ⬜ da fare.
 - ✅ Aggiornamento ogni 10 minuti e a richiesta; stati offline e non autorizzato
 - ✅ Apertura in LiteFin con `cinemaItemId`/`cinemaAction`, o nel primo client installato
 - ⬜ Quick Connect dalla TV (oggi dalla dashboard)
-- ⬜ Scelta del client preferito
+- ✅ Scelta del client che apre i titoli (App → Jellyfin)
 - ⬜ Scopri e Seerr (`/Litefin/Seerr/Status`), pannello con le spiegazioni
 
 ## Live e ingressi
@@ -58,9 +58,9 @@ Legenda: ✅ fatto · 🟡 c'è in Native Tv, da adattare · ⬜ da fare.
 - 🟡 Spegnimento a un orario (ora di andare a letto di Native Tv)
 - ✅ Tasto Home a Cinema++ (LG Input Hook → `cinemapp-home-key`, apre la Home); tre volte Home e Indietro tenuto premuto restano quelli di Cinema
 - ✅ Servizio di Cinema++ a ogni accensione (`57-cinemapp-service`)
-- ⬜ Cinema++ come prima app all'accensione (oggi parte Cinema web)
+- ✅ Cinema++ come prima app all'accensione e al risveglio (Impostazioni → Server): ultimo ingresso bloccato su Cinema++, l'avvio di Cinema web messo da parte e restituito quando si spegne; provato con un riavvio
 - ✅ Aggiornamenti di Cinema++ dalle release GitHub con SHA-256 (Impostazioni → Server)
-- ⬜ Aggiornamenti di Bloomee
+- ✅ Aggiornamenti di Bloomee e Cinema web dalle loro release GitHub, con l'installazione da URL e lo SHA-256 di SHA256SUMS.txt
 
 ## Striscia LED (tappa 2)
 - ✅ Tutto, in C++
