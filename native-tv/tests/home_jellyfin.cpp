@@ -98,6 +98,38 @@ int main() {
         const Json found = jf.search("it f");
         check(found["items"].size() == 1 && found["items"][0]["title"].string() == "It Follows", "search results");
         check(jf.search("i")["items"].size() == 0, "one letter is not a search");
+        // The Musica page: albums by name from a letter, or albums, songs and artists by a query.
+        std::string musicUrl;
+        HomeJellyfin music(dir, dir + "/jellyfin.json",
+                           [&](const std::string &url, const std::string &, std::string &body, long &status, size_t) {
+                               musicUrl = url;
+                               status = 200;
+                               body = "{\"TotalRecordCount\":250,\"Items\":[" +
+                                      item("s1", "Audio", "Song", ",\"Artists\":[\"Bjork\"],\"AlbumId\":\"al\",\"AlbumPrimaryImageTag\":\"t\"") + "," +
+                                      item("a1", "MusicAlbum", "Homogenic", ",\"AlbumArtist\":\"Bjork\",\"ImageTags\":{\"Primary\":\"t\"}") + "]}";
+                               return true;
+                           },
+                           [&now]() { return now; });
+        Json page = music.music("b", "", 120);
+        check(musicUrl.find("IncludeItemTypes=MusicAlbum&") != std::string::npos &&
+                  musicUrl.find("NameStartsWith=B") != std::string::npos &&
+                  musicUrl.find("SortBy=SortName") != std::string::npos && musicUrl.find("StartIndex=120") != std::string::npos,
+              "albums of a letter, by name, from a page");
+        check(page["total"].number() == 250 && page["start"].number() == 120 && page["enabled"].boolean(), "page facts");
+        page = music.music("#", "", 0);
+        check(musicUrl.find("NameLessThan=A") != std::string::npos, "# is what comes before A");
+        page = music.music("", "bj rk", 0);
+        check(musicUrl.find("SearchTerm=bj%20rk") != std::string::npos && musicUrl.find("Audio") != std::string::npos &&
+                  musicUrl.find("NameStartsWith") == std::string::npos,
+              "a query searches albums, songs and artists");
+        check(page["items"][0]["type"].string() == "MusicAlbum" && page["items"][1]["type"].string() == "Audio",
+              "albums before songs");
+        check(page["items"][0]["cover"].string() == "a1:Primary" && page["items"][0]["artist"].string() == "Bjork" &&
+                  page["items"][1]["cover"].string() == "s1:Primary" && page["items"][1]["artist"].string() == "Bjork",
+              "covers and artists, a song's from its artists");
+        check(HomeJellyfin::normalizeItem(Json::parse(R"({"Id":"s2","Type":"Audio","Name":"x","AlbumId":"al","AlbumPrimaryImageTag":"t"})"))["cover"]
+                      .string() == "al:Primary",
+              "a song without art of its own has its album's cover");
     }
     // Without a connection: unconfigured.
     {

@@ -290,12 +290,12 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0, float fadeTop = -
         kit::row(paint, label);
         paint.scene.popTransform();
         const float scroll = static_cast<float>(motion.value(home::id("rx", ri)));
-        for (size_t ci = 0; ci < row.cards.size(); ++ci) {
+        auto drawCard = [&](size_t ci) {
             Rect rest = home::item(row, ri, ci, namedApps);
             rest.x += scroll;
             rest.y += stack;
             if (rest.x + rest.w < -140 || rest.x > kit::canvas::width + 140)
-                continue;
+                return;
             const Card &card = row.cards[ci];
             std::string id = home::hit(ri, ci);
             float focus = static_cast<float>(motion.value(home::id("f", ri, ci)));
@@ -364,7 +364,22 @@ void rows(kit::Paint paint, const Frame &frame, float top = 0, float fadeTop = -
                 poster.enter = enter;
                 kit::card(paint, poster);
             }
+        };
+        // The focused card grows over its neighbours, so it is drawn last.
+        size_t lifted = row.cards.size();
+        float most = 0;
+        for (size_t ci = 0; ci < row.cards.size(); ++ci) {
+            float focus = static_cast<float>(motion.value(home::id("f", ri, ci)));
+            if (focus > most) {
+                most = focus;
+                lifted = ci;
+            }
         }
+        for (size_t ci = 0; ci < row.cards.size(); ++ci)
+            if (ci != lifted)
+                drawCard(ci);
+        if (lifted < row.cards.size())
+            drawCard(lifted);
         paint.scene.popOpacity();
     }
 }

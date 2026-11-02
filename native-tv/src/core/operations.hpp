@@ -49,6 +49,7 @@ enum class Operation {
     AdminUnlock, // /api/admin/unlock: the four-digit admin PIN, answered with a session
     Live, // /api/live: live TV inside Home, opened in the client's video window
     Music, // /api/music: ambient music while Home shows
-    JellyfinLink // /api/jellyfin/link: Quick Connect from the TV's settings
+    JellyfinLink, // /api/jellyfin/link: Quick Connect from the TV's settings
+    JellyfinMusic // /api/home/jellyfin/music: the Musica page's albums, by letter or by search
 };
 }

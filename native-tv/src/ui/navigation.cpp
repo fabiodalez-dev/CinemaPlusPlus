@@ -265,6 +265,10 @@ void Application::screenKey(Key key) {
     if (key == Key::Right && position + 1 < stops.size())
         ++position;
     home.nav = stops[position];
+    // Down on another tab opens it, as OK does; on the page's own tab it goes back into the page.
+    if (key == Key::Down && screen_->barTab() >= 0 && home.nav < home.tabs.size() &&
+        home.nav != static_cast<size_t>(screen_->barTab()))
+        key = Key::Ok;
     if (key == Key::Down) {
         barFocus_ = home.navigation = false;
         screen_->focus(*this);
@@ -273,7 +277,9 @@ void Application::screenKey(Key key) {
         if (home.nav < home.tabs.size()) {
             size_t tab = home.nav;
             std::string name = home.tabs[tab].key;
-            if (registry_.create("tab:" + name)) {
+            // The same pages Home opens from its own bar: Musica is a screen of its own, every
+            // other tab (Live TV among them) is Home's.
+            if (name == "music" && registry_.create("tab:" + name)) {
                 route("tab:" + name);
                 return;
             }

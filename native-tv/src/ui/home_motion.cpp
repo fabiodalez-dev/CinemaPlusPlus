@@ -349,12 +349,14 @@ void Application::homeFocus(bool jump) {
                 motion_.spring(name, target, springParams(kit::motion::spring::row));
         }
     }
-    // The apps row and the top picks share the hero's screen; the stack rises from the picks on.
+    // The apps row and the next one share the hero's screen; the stack rises from there on. The
+    // top picks are not always next to the apps (the inputs can sit between them), so the focus
+    // that lands on them must still bring them on screen.
     const bool kindRows = home.tabs[home.tab].key == "apps" && !grid;
+    const int heroRows = static_cast<int>(std::min<size_t>(defaultRow(home), 1));
     double stack = home.navigation || grid ? 0
                    : kindRows ? home::kindStackTarget(home.row, home.rows.size())
-                              : kit::geometry::stackTarget(static_cast<int>(home.row) -
-                                                           static_cast<int>(defaultRow(home)));
+                              : kit::geometry::stackTarget(static_cast<int>(home.row) - heroRows);
     if (jump)
         motion_.set("sy", stack);
     else
@@ -445,6 +447,15 @@ void Application::homeSelectTab(size_t tab) {
     flow_.tabPending = false;
     if (tab >= home.tabs.size() || (tab == flow_.shown && flow_.pendingTab < 0))
         return;
+    // Musica is a page of its own (music_screen.cpp): a grid with letters and a search, not rows.
+    if (home.tabs[tab].key == "music") {
+        const bool bar = home.navigation;
+        route("tab:music");
+        barFocus_ = home.navigation = bar;
+        home.nav = tab;
+        homeFocus();
+        return;
+    }
     flow_.pendingTab = static_cast<int>(tab);
     flow_.swapAt = now_ + kPageSwapMs;
     // The Apps page's icons (a larger size than Home's) are asked for while the old page leaves,

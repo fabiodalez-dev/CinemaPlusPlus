@@ -18,6 +18,8 @@ Legenda: ✅ fatto · 🟡 c'è in Native Tv, da adattare · ⬜ da fare · ➖ 
 - ✅ Collegamento con Quick Connect dalla dashboard (App → Jellyfin), dietro il PIN amministratore; riuso di `/var/lib/launch-home-cinema/jellyfin.json`
 - ✅ Righe: Continua a guardare (Resume + NextUp senza doppioni), Aggiunti di recente, I tuoi film, Le tue serie, La tua musica
 - ✅ Ricerca nella libreria (film e serie prima della musica), anche senza chiave TMDB
+- ✅ Scheda Musica come pagina a griglia: album in ordine alfabetico, filtro per lettera (# e A–Z, CH+/CH− per cambiare lettera), ricerca solo nella musica (album, brani, artisti)
+- ✅ Focus leggibile dal divano: bordo di 6 px, card che cresce del 16%, pagina che scorre fino alla riga selezionata; canale in onda con bordo e pallino colorati
 - ✅ Copertine dal server con cache su disco (due misure, al massimo 240), token solo nel servizio
 - ✅ Aggiornamento ogni 10 minuti e a richiesta; stati offline e non autorizzato
 - ✅ Apertura in LiteFin con `cinemaItemId`/`cinemaAction`, o nel primo client installato

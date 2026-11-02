@@ -97,7 +97,7 @@ constexpr float pill = 999;
 constexpr float key = 18;
 } // namespace radius
 namespace elevation {
-constexpr float focusRingWidth = 3;
+constexpr float focusRingWidth = 6;
 constexpr Color focusRingColor = rgb(0xF1EEF4);
 constexpr ShadowRecipe focusShadow = {22, 56, 0.62f};
 constexpr ShadowRecipe raised = {14, 36, 0.5f};
@@ -230,9 +230,9 @@ constexpr SpringTuning pillLead = {460, 0.9f};
 constexpr SpringTuning pillTrail = {250, 0.9f};
 } // namespace spring
 namespace scale {
-constexpr float card = 1.1f;
+constexpr float card = 1.16f;
 constexpr float app = 1.1f;
-constexpr float input = 1.1f;
+constexpr float input = 1.14f;
 constexpr float tile = 1.1f;
 constexpr float stat = 1.035f;
 constexpr float row = 1.02f;

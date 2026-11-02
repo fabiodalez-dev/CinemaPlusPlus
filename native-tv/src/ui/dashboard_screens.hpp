@@ -10,6 +10,8 @@ namespace nativetv {
 std::unique_ptr<ScreenView> makeLiveScreen(const std::string &route);
 std::unique_ptr<ScreenView> makeSettingsScreen(const std::string &route);
 std::unique_ptr<ScreenView> makeCatalogScreen(const std::string &route);
+// Home's Musica tab: the music library by letter, with its search (music_screen.cpp).
+std::unique_ptr<ScreenView> makeMusicScreen(const std::string &route);
 // The one line screen_registry.cpp needs.
 void registerDashboardScreens(ScreenRegistry &registry);
 } // namespace nativetv

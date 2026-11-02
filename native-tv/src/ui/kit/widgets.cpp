@@ -529,6 +529,10 @@ void inputTile(Paint paint, const InputTile &tile) {
     Group group(scene, enter, look.scale != 1 ? &scale : nullptr);
     Node &base = scene.shape(tile.rest, color::surface2, radius::md);
     restOutline(base);
+    // What plays behind the page keeps an accent edge, so it reads from across the room even
+    // when focus is elsewhere.
+    if (tile.live)
+        base.ring = {4, 0, color::accent};
     if (look.ringAlpha > 0)
         base.shadow = {0, look.shadowDy, look.shadowBlur, 0, {0, 0, 0, look.shadowAlpha}};
     focusRing(scene, tile.rest, radius::md, look.ringAlpha);
@@ -540,8 +544,10 @@ void inputTile(Paint paint, const InputTile &tile) {
          color::onSurface);
     text(paint, {box.x + 20, subY, box.w - 40, type::labelS.line}, tile.sub, type::labelS,
          color::onSurface3);
-    if (tile.live)
-        scene.shape({box.x + box.w - 16 - 10, box.y + 16, 10, 10}, color::accent, 5);
+    if (tile.live) {
+        Node &dot = scene.shape({box.x + box.w - 18 - 18, box.y + 18, 18, 18}, color::accent, 9);
+        dot.shadow = {0, 0, 14, 0, faded(color::accent, .8f)};
+    }
     hit(scene, look.rect, tile.id);
 }
 

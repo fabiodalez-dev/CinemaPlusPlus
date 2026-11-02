@@ -19001,6 +19001,23 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
         (void)exchange.respond(200, {{"Content-Type", "application/json"}}, result.dump());
         return;
     }
+    if (request.uri == "/api/home/jellyfin/music" && request.method == "GET") {
+        // The Musica page: albums by letter, or albums, songs and artists matching a query.
+        std::string letter, query, start;
+        (void)uniqueQueryParameter(request.query, "letter", letter);
+        (void)uniqueQueryParameter(request.query, "q", query);
+        (void)uniqueQueryParameter(request.query, "start", start);
+        const bool startOk = start.empty() || (start.size() < 7 && start.find_first_not_of("0123456789") == std::string::npos);
+        if (letter.size() > 1 || query.size() > 120 || !startOk) {
+            (void)exchange.respond(400, {{"Content-Type", "application/json"}},
+                                   "{\"ok\":false,\"error\":\"bad query\"}");
+            return;
+        }
+        Json result = homeJellyfin_.music(letter, query, start.empty() ? 0 : std::stoi(start));
+        result.set("ok", Json::flag(true));
+        (void)exchange.respond(200, {{"Content-Type", "application/json"}}, result.dump());
+        return;
+    }
     if (request.uri == "/api/home/jellyfin/refresh" && request.method == "POST") {
         if (rejectCrossSitePost(exchange))
             return;

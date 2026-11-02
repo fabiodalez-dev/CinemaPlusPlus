@@ -37,6 +37,12 @@ class HomeJellyfin {
     bool image(const std::string &spec, std::string &bytes);
     // Search titles; the same row shape.
     Json search(const std::string &query);
+    // The music library for the Musica page, by name: the albums whose name starts with `letter`
+    // ("#" for the ones before A, "" for all), or, with a `query` of two characters or more, the
+    // albums, songs and artists that match it. {"enabled", "items", "total", "start"}; `start`
+    // pages through them, kMusicPage at a time.
+    static constexpr int kMusicPage = 120;
+    Json music(const std::string &letter, const std::string &query, int start);
 
     // Exposed for the tests.
     static Json normalizeItem(const Json &raw);

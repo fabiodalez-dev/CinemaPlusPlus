@@ -80,6 +80,7 @@ class RuntimeTests(unittest.TestCase):
                 package.stage(str(app), "9.1.0", build)
             self.assertFalse(app.exists(), "A worker without its daemon must fail before web payload staging")
             (build / "nativetv-daemon").write_bytes(binary)
+            (build / "nativetv-ambilight").write_bytes(binary)
             with self.assertRaises(ValueError):
                 package.stage(str(app), "9.1.0", build)
             self.assertFalse(app.exists(), "The native splash payload requires the client build")
@@ -145,6 +146,7 @@ class RuntimeTests(unittest.TestCase):
             (build / "nativetv-daemon").write_bytes(elf(
                 libraries=("libc.so.6", "libcurl.so.4"), runpath="$ORIGIN"))
             (build / "nativetv-service").write_bytes(elf())
+            (build / "nativetv-ambilight").write_bytes(elf())
             curlLibrary = elf(
                 libraries=("libssl.so.3", "libcrypto.so.3", "libc.so.6"),
                 shared=True, soname="libcurl.so.4")
@@ -340,6 +342,7 @@ class RuntimeTests(unittest.TestCase):
             binary = elf(glibc="2.17")
             (build / "nativetv-service").write_bytes(binary)
             (build / "nativetv-daemon").write_bytes(binary)
+            (build / "nativetv-ambilight").write_bytes(binary)
             output = root / "payload/native"
             manifest = runtime.stage(build, output)
             self.assertEqual(manifest["abi"]["architecture"], "arm")
@@ -358,7 +361,7 @@ class RuntimeTests(unittest.TestCase):
                 runtime.archive_runtime(output, root / name)
             self.assertEqual((root / "one.tar.gz").read_bytes(), (root / "two.tar.gz").read_bytes())
             with tarfile.open(root / "one.tar.gz") as archive:
-                self.assertEqual(sorted(archive.getnames()), ["native/LICENSE-civetweb.txt", "native/LICENSE-json-c.txt", "native/nativetv-daemon", "native/nativetv-service", "native/remotekeys-filter.js", "native/runtime.json"])
+                self.assertEqual(sorted(archive.getnames()), ["native/LICENSE-civetweb.txt", "native/LICENSE-json-c.txt", "native/nativetv-ambilight", "native/nativetv-daemon", "native/nativetv-service", "native/remotekeys-filter.js", "native/runtime.json"])
                 self.assertEqual(archive.getmember("native/nativetv-service").mode, 0o755)
                 self.assertEqual(archive.getmember("native/nativetv-daemon").mode, 0o755)
             (build / "nativetv-service").write_bytes(b"invalid replacement")

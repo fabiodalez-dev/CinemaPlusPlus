@@ -97,10 +97,10 @@ void tokens() {
               kit::motion::spring::row.stiffness == 230 &&
               near(kit::motion::spring::row.dampingRatio, .96f, 1e-6f) &&
               kit::motion::stagger::heroText[2] == 240 && kit::motion::ms::idleAfter == 30000 &&
-              near(kit::motion::scale::card, 1.1f, 1e-6f) &&
+              near(kit::motion::scale::card, 1.16f, 1e-6f) &&
               near(kit::motion::ease::out.x1, .23f, 1e-6f) && kit::motion::ease::linear.x2 == 1,
           "Motion tokens keep durations, springs, scales and curves");
-    check(kit::elevation::focusRingWidth == 3 && kit::elevation::focusShadow.dy == 22 &&
+    check(kit::elevation::focusRingWidth == 6 && kit::elevation::focusShadow.dy == 22 &&
               kit::elevation::focusShadow.blur == 56 &&
               near(kit::elevation::focusShadow.alpha, .62f),
           "Elevation tokens keep the ring and the focus shadow");
@@ -160,15 +160,16 @@ void focusMath() {
 
     focus::Look rest = focus::lookAt(card, kit::motion::scale::card, 0);
     check(sameRect(rest.rect, card) && rest.ringAlpha == 0 && rest.shadowAlpha == 0 &&
-              rest.ringWidth == 3,
+              rest.ringWidth == 6,
           "An unfocused card has no ring and no shadow");
     focus::Look half = focus::lookAt(card, kit::motion::scale::card, .5f);
     check(near(half.ringAlpha, .5f) && near(half.shadowAlpha, .31f) && half.shadowDy == 22 &&
-              half.shadowBlur == 56 && near(half.scale, 1.05f, 1e-6f),
+              half.shadowBlur == 56 && near(half.scale, 1.08f, 1e-6f),
           "Ring and shadow fade with focus; their shape does not change");
     focus::Look full = focus::lookAt(card, kit::motion::scale::card, 1);
-    check(near(full.shadowAlpha, .62f) && sameRect(full.rect, lifted),
-          "Full focus is the 10% lift with the .62 shadow");
+    check(near(full.shadowAlpha, .62f) &&
+              sameRect(full.rect, focus::scaledAbout(card, kit::motion::scale::card)),
+          "Full focus is the 16% lift with the .62 shadow");
 
     check(sameColor(focus::inkAt(kit::color::onSurface2, kit::color::onFocus, 0),
                     kit::color::onSurface2) &&
@@ -304,13 +305,13 @@ void cards() {
     poster.focus = 1;
     kit::card(lifted.paint(), poster);
     const Node &focused = lifted.scene.nodes[0];
-    check(near(focused.group.sx, 1.1f, 1e-5f) && near(focused.group.sy, 1.1f, 1e-5f) &&
-              sameRect(focused.group.apply(focused.rect), {65, 599.55f, 330, 185.9f}) &&
-              near(focused.ring.outer, 3) && sameColor(focused.ring.color, kit::rgb(0xF1EEF4)) &&
+    check(near(focused.group.sx, 1.16f, 1e-5f) && near(focused.group.sy, 1.16f, 1e-5f) &&
+              sameRect(focused.group.apply(focused.rect), {56, 594.48f, 348, 196.04f}) &&
+              near(focused.ring.outer, 6) && sameColor(focused.ring.color, kit::rgb(0xF1EEF4)) &&
               focused.shadow.dy == 22 && focused.shadow.blur == 56 &&
               near(focused.shadow.color.a, .62f) &&
-              sameRect(hitFor(lifted.scene, "card:0")->rect, {65, 599.55f, 330, 185.9f}),
-          "A focused card scales 1.1 about its centre and gains the ring and shadow");
+              sameRect(hitFor(lifted.scene, "card:0")->rect, {56, 594.48f, 348, 196.04f}),
+          "A focused card scales 1.16 about its centre and gains the ring and shadow");
 
     Fixture after;
     kit::card(after.paint(), poster);
@@ -410,11 +411,12 @@ void circlesAndTiles() {
     kit::inputTile(input.paint(), tile);
     check(sameRect(input.scene.nodes[0].rect, {80, 1112, 300, 169}) &&
               sameColor(input.scene.nodes[0].color, kit::color::surface2) &&
-              near(input.scene.nodes[0].ring.inner, 1) &&
+              near(input.scene.nodes[0].ring.inner, 4) &&
+              sameColor(input.scene.nodes[0].ring.color, kit::color::accent) &&
               near(input.scene.nodes[0].groupOpacity, .62f) && textAt(input.scene, "HDMI 1") &&
               textAt(input.scene, "Game Console") &&
-              shapeAt(input.scene, {80 + 300 - 26, 1128, 10, 10}),
-          "An unused input tile is 62% opaque with its outline, names and a live dot 16 px from "
+              shapeAt(input.scene, {80 + 300 - 36, 1130, 18, 18}),
+          "An unused live input tile is 62% opaque with an accent edge, names and an 18 px dot 18 px from "
           "the corner");
 
     Fixture appTile;

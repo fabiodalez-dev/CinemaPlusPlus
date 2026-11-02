@@ -193,6 +193,14 @@ Json HomeJellyfin::normalizeItem(const Json &raw) {
     if (raw["ParentIndexNumber"].isNumber()) item.set("season", raw["ParentIndexNumber"]);
     if (raw["IndexNumber"].isNumber()) item.set("number", raw["IndexNumber"]);
     item.set("music", Json::flag(type == "MusicAlbum" || type == "Audio" || type == "MusicArtist"));
+    // An album's or a song's artist, and its square cover for the Musica page's grid.
+    if (raw["AlbumArtist"].isString() && !raw["AlbumArtist"].string().empty()) item.set("artist", raw["AlbumArtist"]);
+    else if (raw["Artists"].isArray() && raw["Artists"].size() && raw["Artists"][0].isString())
+        item.set("artist", raw["Artists"][0]);
+    if (type == "Audio" && raw["Album"].isString()) item.set("album", raw["Album"]);
+    if (raw["ImageTags"]["Primary"].isString()) item.set("cover", Json::text(raw["Id"].string() + ":Primary"));
+    else if (raw["AlbumId"].isString() && raw["AlbumPrimaryImageTag"].isString())
+        item.set("cover", Json::text(raw["AlbumId"].string() + ":Primary"));
     // Artwork: its own backdrop, the series' backdrop, a thumb, the poster.
     std::string image, backdrop;
     const Json tags = raw["ImageTags"];
@@ -394,6 +402,48 @@ Json HomeJellyfin::search(const std::string &query) {
                 ordered.add(item);
         }
     result.set("items", ordered);
+    return result;
+}
+
+Json HomeJellyfin::music(const std::string &letter, const std::string &query, int start) {
+    const Connection c = readConnection();
+    Json result = Json::object();
+    result.set("enabled", Json::flag(c.valid()));
+    result.set("items", Json::array());
+    result.set("total", Json::numeric(0));
+    result.set("start", Json::numeric(start));
+    if (!c.valid() || start < 0) return result;
+    std::string path = "/Users/" + c.userId + "/Items?Recursive=true&SortBy=SortName&SortOrder=Ascending&" +
+                       std::string(kFields) + "&StartIndex=" + std::to_string(start) +
+                       "&Limit=" + std::to_string(kMusicPage);
+    if (query.size() >= 2)
+        path += "&IncludeItemTypes=MusicAlbum,Audio,MusicArtist&SearchTerm=" + urlEncode(query);
+    else {
+        path += "&IncludeItemTypes=MusicAlbum";
+        if (letter == "#") path += "&NameLessThan=A";
+        else if (letter.size() == 1 && std::isalpha(static_cast<unsigned char>(letter[0])))
+            path += "&NameStartsWith=" + std::string(1, static_cast<char>(std::toupper(static_cast<unsigned char>(letter[0]))));
+    }
+    Json doc;
+    long status = 0;
+    if (!getJson(c, path, doc, status)) {
+        result.set("error", Json::text(status == 401 || status == 403 ? "unauthorized" : "offline"));
+        return result;
+    }
+    Json items = Json::array();
+    if (doc["Items"].isArray())
+        for (const Json &raw : doc["Items"].items()) items.add(normalizeItem(raw));
+    // Albums first when searching, then songs, then artists: what the page is for.
+    if (query.size() >= 2) {
+        Json ordered = Json::array();
+        for (const char *type : {"MusicAlbum", "Audio", "MusicArtist"})
+            for (const Json &item : items.items())
+                if (item["type"].string() == type) ordered.add(item);
+        items = ordered;
+    }
+    result.set("items", items);
+    result.set("total", Json::numeric(doc["TotalRecordCount"].isNumber() ? doc["TotalRecordCount"].number()
+                                                                         : static_cast<double>(items.size())));
     return result;
 }
 

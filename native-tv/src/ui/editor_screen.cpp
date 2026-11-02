@@ -1,4 +1,5 @@
-// The two text editors: searching films and series, and renaming the profile in use. A field,
+// The text editors: searching films and series (or, from the Musica page, the music library), and
+// renaming the profile in use. A field,
 // the on-screen keyboard pad Setup uses and, for the search, the results as cards; a result opens
 // its details on top of the search, which keeps its query and results for Back.
 //
@@ -63,7 +64,7 @@ class EditorScreen final : public ScreenView {
     enum class Zone { Keys, Clear, Results, Retry };
 
   public:
-    explicit EditorScreen(bool rename) : rename_(rename) {}
+    explicit EditorScreen(bool rename, bool music = false) : rename_(rename), music_(music) {}
 
     std::string name() const override {
         return details_ ? "details" : rename_ ? "rename" : "search";
@@ -215,7 +216,7 @@ class EditorScreen final : public ScreenView {
             Json data = response.json();
             results_.clear();
             selected_ = 0;
-            bool usable = response.ok() && data.valid() && data["ok"].boolean();
+            bool usable = response.ok() && data.valid() && data["ok"].boolean() && !data.has("error");
             if (!usable || !data["enabled"].boolean()) {
                 searchError_ = true;
                 searchComplete_ = false;
@@ -225,6 +226,10 @@ class EditorScreen final : public ScreenView {
                 searchError_ = false;
                 searchComplete_ = true;
                 for (const auto &item : data["items"].items()) {
+                    if (music_) {
+                        results_.push_back(musicCard(item));
+                        continue;
+                    }
                     Card card;
                     card.id = item["id"].string();
                     card.kind = "title";
@@ -242,7 +247,8 @@ class EditorScreen final : public ScreenView {
                     results_.push_back(card);
                 }
                 status_ = results_.empty()
-                              ? msg("tv.editor.noResults", "No films or series found. Try another search.")
+                              ? (music_ ? msg("tv.editor.noMusic", "No albums, songs or artists found. Try another search.")
+                                        : msg("tv.editor.noResults", "No films or series found. Try another search."))
                               : msg("tv.editor.results", "{n} results",
                                     fields({{"n", Json::text(std::to_string(results_.size()))}}));
             }
@@ -268,10 +274,12 @@ class EditorScreen final : public ScreenView {
         scene.pushTransform(Transform::translate(0, static_cast<float>(18 * headEnter)));
         paint.glyphs.text(scene, {kit::canvas::safeX, kLabelY, kFieldW, kit::type::title.line},
                           rename_ ? msg("tv.editor.renameTitle", "Rename profile")
+                          : music_ ? msg("tv.editor.searchMusic", "Search your music")
                                   : msg("tv.editor.searchTitle", "Search films and series"),
                           kit::type::title, kit::color::onSurface2);
         kit::textField(paint, pad_.field(host.nowMs(), {kit::canvas::safeX, kFieldY, kFieldW, kFieldH},
                                          rename_ ? msg("tv.editor.namePlaceholder", "Name")
+                                         : music_ ? msg("tv.editor.musicPlaceholder", "Album, song or artist")
                                                  : msg("tv.editor.searchPlaceholder", "Title")));
         paint.glyphs.text(scene, {kit::canvas::safeX, kStatusY, kFieldW, kit::type::labelM.line}, status_,
                           kit::type::labelM,
@@ -408,7 +416,7 @@ class EditorScreen final : public ScreenView {
         searching_ = true;
         searchError_ = searchComplete_ = false;
         status_ = msg("tv.editor.searching", "Searching…");
-        searchGeneration_ = host.services().read(kSearch, Operation::SearchTitles,
+        searchGeneration_ = host.services().read(kSearch, music_ ? Operation::JellyfinMusic : Operation::SearchTitles,
                                                  fields({{"query", Json::text(query)}}));
         if (!searchGeneration_) {
             searching_ = false;
@@ -592,7 +600,8 @@ class EditorScreen final : public ScreenView {
             if (searching_) {
                 box.icon = "search";
                 box.title = msg("tv.editor.searching", "Searching…");
-                box.message = msg("tv.editor.searchingBody", "Looking for films and series that match your query.");
+                box.message = music_ ? msg("tv.editor.searchingMusic", "Looking for albums, songs and artists that match.")
+                                     : msg("tv.editor.searchingBody", "Looking for films and series that match your query.");
                 box.loadingMs = host.nowMs();
             } else if (searchError_) {
                 box.icon = "info";
@@ -601,11 +610,13 @@ class EditorScreen final : public ScreenView {
                 box.message = msg("tv.editor.searchErrorBody", "Try again in a moment.");
             } else if (searchComplete_) {
                 box.icon = "search";
-                box.title = msg("tv.editor.none", "No films or series found");
+                box.title = music_ ? msg("tv.editor.noneMusic", "No music found")
+                                   : msg("tv.editor.none", "No films or series found");
                 box.message = msg("tv.editor.noneBody", "Try another title or spelling.");
             } else {
                 box.icon = "search";
-                box.title = msg("tv.editor.searchTitle", "Search films and series");
+                box.title = music_ ? msg("tv.editor.searchMusic", "Search your music")
+                                   : msg("tv.editor.searchTitle", "Search films and series");
                 box.message = msg("tv.editor.idleBody", "Enter at least 2 characters to see matching titles.");
             }
             kit::statusPanel(paint, box);
@@ -632,13 +643,34 @@ class EditorScreen final : public ScreenView {
             card.id = "editor:result:" + std::to_string(i);
             card.image = results_[i].image;
             card.title = results_[i].title;
+            if (music_)
+                card.subtitle = results_[i].subtitle;
             card.focus = static_cast<float>(motion.value("editor:r:" + std::to_string(i)));
             kit::card(paint, card);
         }
         scene.popClip();
     }
 
-    bool rename_;
+    // A result of the music search: what it is (album, song, artist) and by whom, on its cover.
+    static Card musicCard(const Json &item) {
+        Card card;
+        card.id = item["id"].string();
+        card.kind = "jellyfin";
+        card.title = item["title"].string();
+        const std::string type = item["type"].string();
+        std::string what = type == "Audio"         ? msg("tv.music.song", "Song")
+                           : type == "MusicArtist" ? msg("tv.music.artist", "Artist")
+                                                   : msg("tv.music.album", "Album");
+        if (item["artist"].isString() && type != "MusicArtist")
+            what += " · " + item["artist"].string();
+        card.subtitle = what;
+        const std::string art = item["cover"].isString() ? item["cover"].string() : item["image"].string();
+        card.image = art.empty() ? "" : "jellyfin:" + art + ":640";
+        card.data = item;
+        return card;
+    }
+
+    bool rename_, music_;
     KeyboardPad pad_;
     Zone zone_ = Zone::Keys;
     size_t selected_ = 0;
@@ -653,8 +685,8 @@ class EditorScreen final : public ScreenView {
 } // namespace
 
 std::unique_ptr<ScreenView> makeEditorScreen(const std::string &route) {
-    if (route == "rename" || route == "search")
-        return std::unique_ptr<ScreenView>(new EditorScreen(route == "rename"));
+    if (route == "rename" || route == "search" || route == "search:music")
+        return std::unique_ptr<ScreenView>(new EditorScreen(route == "rename", route == "search:music"));
     return nullptr;
 }
 } // namespace nativetv
