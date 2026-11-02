@@ -458,6 +458,8 @@
 "home.ch.radio": {"text": "Radio", "from": "Radio"},
 "home.ch.remove": {"text": "Rimuovi", "from": "Remove"},
 "home.ch.show": {"text": "Mostra i canali della TV", "from": "Show the TV’s channels"},
+"home.cinemapp": {"text": "Cinema++ è la Home di questa TV", "from": "Cinema++ is this TV’s Home"},
+"home.cinemappDesc": {"text": "La sua Home si apre con il tasto Home e, se lo attivi in Impostazioni, Server, all'accensione.", "from": "Its Home opens with the Home key and, when switched on in Settings, Server, at power-on."},
 "home.clock12": {"text": "12 ore", "from": "12-hour"},
 "home.clock24": {"text": "24 ore", "from": "24-hour"},
 "home.clockFormat": {"text": "Formato orologio", "from": "Clock format"},

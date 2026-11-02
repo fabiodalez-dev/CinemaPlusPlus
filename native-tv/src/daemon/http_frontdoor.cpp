@@ -16669,6 +16669,8 @@ void HttpFrontDoor::sendHomeStatus(HttpExchange &exchange) const {
                                              response["restorePending"].boolean()));
     }
     if (probe.isObject()) response.set("nativeClient", probe);
+    // Cinema++ is Home on any webOS: the dashboard's Home tab sets its layout, wallpapers and tiles.
+    response.set("cinemapp", Json::flag(true));
     if (const HomeOrchestrator *orchestrator = homeOrchestrator())
         response.set("nativeHome", orchestrator->nativeStatus());
     if (includeCatalogue) {

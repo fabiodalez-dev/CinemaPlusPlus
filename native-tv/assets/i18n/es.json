@@ -447,6 +447,8 @@
 "home.ch.radio": {"text": "Radio", "from": "Radio"},
 "home.ch.remove": {"text": "Quitar", "from": "Remove"},
 "home.ch.show": {"text": "Mostrar los canales de la TV", "from": "Show the TV’s channels"},
+"home.cinemapp": {"text": "Cinema++ es el Inicio de esta TV", "from": "Cinema++ is this TV’s Home"},
+"home.cinemappDesc": {"text": "Su Inicio se abre con la tecla Home y, si lo activas en Ajustes, Servidor, al encender.", "from": "Its Home opens with the Home key and, when switched on in Settings, Server, at power-on."},
 "home.clock12": {"text": "12 horas", "from": "12-hour"},
 "home.clock24": {"text": "24 horas", "from": "24-hour"},
 "home.clockFormat": {"text": "Formato del reloj", "from": "Clock format"},

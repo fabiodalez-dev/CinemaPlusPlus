@@ -37,8 +37,12 @@ async function homePost(path, body) {
 }
 
 // The tab, as Game's, only where the server offers Native Tv Home.
+// Cinema++ is Home on any webOS: its layout, wallpapers and tiles are set here even where
+// Native Tv's own Home (webOS 9 and 10) is not available.
+function homeOk(st) { return !!(st && (st.cinemapp || (st.supported && st.supported.ok))); }
+
 function setHomeAvailable(st) {
-  homeAvailable = st.available !== false;
+  homeAvailable = st.available !== false || !!st.cinemapp;
   if (q('tab-btn-home')) q('tab-btn-home').hidden = !homeAvailable;
   document.querySelectorAll('[data-nativetv-home-note]').forEach(note => { note.hidden = !st.enabled; });
 }
@@ -192,7 +196,7 @@ async function homeYoutubeRemove() {
   if (r && r.ok) { youtubeKeySet = r.youtubeKeySet === true; renderYoutube(); }
 }
 
-function homeWritable() { return !!(!homeSaving && homeStatus && (homeStatus.supported.ok || homeStatus.enabled || homeStatus.restorePending) && homeStatus.writable !== false); }
+function homeWritable() { return !!(!homeSaving && homeStatus && (homeOk(homeStatus) || homeStatus.enabled || homeStatus.restorePending) && homeStatus.writable !== false); }
 
 function renderHome() {
   const st = homeStatus;
@@ -203,6 +207,9 @@ function renderHome() {
   if (st.restorePending) {
     state.textContent = t('home.restorePending', 'LG Home restoration is incomplete');
     desc.textContent = t('home.restoreRetry', 'Retry restoring LG Home before switching Native Tv Home on again.');
+  } else if (st.cinemapp) {
+    state.textContent = t('home.cinemapp', 'Cinema++ is this TV’s Home');
+    desc.textContent = t('home.cinemappDesc', 'Its Home opens with the Home key and, when switched on in Settings, Server, at power-on.');
   } else if (!st.supported.ok) {
     state.textContent = t('home.unavailable', 'Not available on this TV');
     desc.textContent = st.supported.reason || '';
@@ -218,9 +225,9 @@ function renderHome() {
     desc.textContent = t('home.isOffDesc', 'Nothing of LG’s is changed: Native Tv Home is laid over LG’s Home while on, and switching off takes it away.');
   }
   const more = q('home-more');
-  if (more) more.hidden = !st.supported.ok;
+  if (more) more.hidden = !homeOk(st);
   const startupRow = q('home-startup-row');
-  if (startupRow) startupRow.hidden = !st.supported.ok;
+  if (startupRow) startupRow.hidden = !st.supported.ok || !!st.cinemapp;
   const startup = q('home-startup');
   if (startup) {
     const on = st.openOnPowerOn === true;
@@ -229,7 +236,7 @@ function renderHome() {
     startup.disabled = !homeWritable() || !st.enabled;
   }
   const namesRow = q('home-app-names-row');
-  if (namesRow) namesRow.hidden = !st.supported.ok;
+  if (namesRow) namesRow.hidden = !homeOk(st);
   const appNames = q('home-app-names');
   if (appNames) {
     const on = !st.layout || st.layout.appNames !== false;
@@ -238,27 +245,27 @@ function renderHome() {
     appNames.disabled = !homeWritable();
   }
   const clockRow = q('home-clock-row'), clock = q('home-clock');
-  if (clockRow) clockRow.hidden = !st.supported.ok;
+  if (clockRow) clockRow.hidden = !homeOk(st);
   if (clock) {
     const twelve = !!st.layout && st.layout.clockFormat === '12h';
     updateToggle(clock, { cls: 'idle', label: twelve ? t('home.clock12', '12-hour') : t('home.clock24', '24-hour') });
     clock.disabled = !homeWritable();
   }
   const ambienceRow = q('home-ambience-row'), ambienceSel = q('home-ambience');
-  if (ambienceRow) ambienceRow.hidden = !st.supported.ok;
+  if (ambienceRow) ambienceRow.hidden = !homeOk(st);
   if (ambienceSel) {
     ambienceSel.value = (st.layout && st.layout.ambience) || 'default';
     ambienceSel.disabled = !homeWritable();
   }
   const focusRow = q('home-focus-row'), focusSel = q('home-focus');
-  if (focusRow) focusRow.hidden = !st.supported.ok;
+  if (focusRow) focusRow.hidden = !homeOk(st);
   if (focusSel) {
     focusSel.value = (st.layout && st.layout.colours && st.layout.colours.accent) || '';
     focusSel.disabled = !homeWritable();
   }
   [['home-show-inputs', 'showInputs', true], ['home-show-live', 'showLive', false], ['home-show-lg', 'showLgHome', true]].forEach(([id, key, fallback]) => {
     const row = q(id + '-row'), btn = q(id);
-    if (row) row.hidden = !st.supported.ok;
+    if (row) row.hidden = !homeOk(st);
     if (!btn) return;
     const on = st.layout && st.layout[key] !== undefined ? st.layout[key] === true : fallback;
     updateToggle(btn, { cls: on ? 'good' : 'idle', label: on ? t('common.on', 'On') : t('common.off', 'Off'), on: on });
@@ -267,9 +274,9 @@ function renderHome() {
   });
   const hideRow = q('home-hide-lg-row');
   // webOS 9 only: newer TVs have no layout file for LG's Home to start on.
-  if (hideRow) hideRow.hidden = !st.supported.ok || st.hideLgHomeAtStartAvailable === false;
+  if (hideRow) hideRow.hidden = !st.supported.ok || !!st.cinemapp || st.hideLgHomeAtStartAvailable === false;
   const picRow = q('home-picture-row');
-  if (picRow) picRow.hidden = !st.supported.ok;
+  if (picRow) picRow.hidden = !homeOk(st);
   const pic = q('home-picture');
   if (pic) {
     const on = !!st.layout && st.layout.picture === true;
@@ -285,6 +292,7 @@ function renderHome() {
     });
     hide.disabled = !homeWritable();
   }
+  if (btn) btn.hidden = !!st.cinemapp && !st.enabled && !st.restorePending;
   if (btn) {
     const wantOn = !(st.enabled || st.restorePending);
     const armed = homeArmed === (wantOn ? 'on' : 'off');
