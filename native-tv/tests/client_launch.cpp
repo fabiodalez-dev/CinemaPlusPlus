@@ -8,10 +8,11 @@ int main() {
     assert(!nativetv::applyClientLaunchParameters(
         R"({"@system_native_app":true,"nid":"com.tvweb.native"})", screen));
     assert(screen == "home");
-    // The dashboard's tile sends no screen; its app id decides, and a named screen still wins.
+    // Cinema++'s tile sends no screen; its app id opens the Home, and a named screen still wins.
+    screen = "dashboard";
     assert(nativetv::applyClientLaunchParameters(
         R"({"@system_native_app":true,"nid":"com.tvweb.dashboard"})", screen));
-    assert(screen == "dashboard");
+    assert(screen == "home");
     assert(nativetv::applyClientLaunchParameters(
         R"({"nid":"com.tvweb.dashboard","screen":"dashboard:settings"})", screen));
     assert(screen == "dashboard:settings");

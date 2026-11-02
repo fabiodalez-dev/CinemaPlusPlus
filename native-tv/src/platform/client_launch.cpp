@@ -22,12 +22,13 @@ bool applyClientLaunchParameters(const std::string &argument,
     const Json parameters = Json::parse(argument);
     const Json screen = parameters["screen"];
     if (!parameters.isObject()) return false;
-    // The dashboard's tile is launched from LG's launcher, which sends no
-    // parameters, so the app's own id (the jailer's "nid") names its screen.
+    // Cinema++'s tile is launched from LG's launcher, and at power-on by LG's
+    // boot manager, with no parameters: the app's own id (the jailer's "nid")
+    // opens its Home, the screen Cinema++ is for.
     if (!screen.isString()) {
         const Json app = parameters["nid"];
         if (!app.isString() || app.string() != "com.tvweb.dashboard") return false;
-        initialScreen = "dashboard";
+        initialScreen = "home";
         return true;
     }
     const std::string requested = screen.string();

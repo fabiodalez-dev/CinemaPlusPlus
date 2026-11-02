@@ -79,7 +79,7 @@ STAGE=/var/lib/tvweb/.deploy     # on the TV; beside the install so moves are re
 # A release is unpacked and installed by the TV itself (Settings > Updates).
 [ -n "$RELEASE" ] && STAGE=/var/lib/tvweb/.update
 
-FILES="tvwebctl 56-cinemapp-ledstrip 57-cinemapp-service cinemapp-home-key assets/ui.html assets/favicon.svg \
+FILES="tvwebctl 56-cinemapp-ledstrip 57-cinemapp-service 58-cinemapp-first-app cinemapp-first-app cinemapp-home-key assets/ui.html assets/favicon.svg \
 assets/ui/theme.css assets/ui/ui.css assets/ui/i18n.js assets/ui/core.js assets/ui/theme.js assets/ui/format.js assets/ui/readouts.js \
 assets/ui/server.js assets/ui/controls.js assets/ui/privacy.js assets/ui/lgsettings.js assets/ui/game.js \
 assets/ui/system.js assets/ui/history.js assets/ui/ssh.js assets/ui/screentime.js assets/ui/apps.js assets/ui/install.js assets/ui/home.js assets/ui/tabs.js assets/ui/servicemenu.js \
@@ -228,6 +228,14 @@ if [ -f "\$D/56-cinemapp-ledstrip" ]; then
     mv -f /var/lib/webosbrew/init.d/.56-cinemapp-ledstrip.new /var/lib/webosbrew/init.d/56-cinemapp-ledstrip
 fi
 [ -f "\$D/cinemapp-home-key" ] && chmod 755 "\$D/cinemapp-home-key"
+# Cinema++ as the first app at power-on: the hook does nothing until
+# cinemapp-first-app --enable (Settings > Server) writes first-app.on.
+[ -f "\$D/cinemapp-first-app" ] && chmod 755 "\$D/cinemapp-first-app"
+if [ -f "\$D/58-cinemapp-first-app" ]; then
+  cp "\$D/58-cinemapp-first-app" /var/lib/webosbrew/init.d/.58-cinemapp-first-app.new &&
+    chmod 755 /var/lib/webosbrew/init.d/.58-cinemapp-first-app.new &&
+    mv -f /var/lib/webosbrew/init.d/.58-cinemapp-first-app.new /var/lib/webosbrew/init.d/58-cinemapp-first-app
+fi
 # Cinema++: its service at boot (Native Tv's full hook stays for --persist).
 if [ -f "\$D/57-cinemapp-service" ]; then
   cp "\$D/57-cinemapp-service" /var/lib/webosbrew/init.d/.57-cinemapp-service.new &&

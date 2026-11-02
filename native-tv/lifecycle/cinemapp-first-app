@@ -1,0 +1,304 @@
+#!/bin/sh
+# Cinema++ as the first app at power-on, and again on every wake from standby.
+#
+#   cinemapp-first-app --enable    take over from Cinema web and turn it on
+#   cinemapp-first-app --disable   turn it off and give Cinema web its own back
+#   cinemapp-first-app --boot      the init.d hook: bring Cinema++ up, then
+#                                  watch for wakes (Quick Start+)
+#   cinemapp-first-app --status    on | off
+#
+# The way in is Cinema's (scripts/boot-launch.sh and tvtools.py of Cinema
+# 0.3.9), with Cinema++'s id: LG's last input pinned read-only to Cinema++ as
+# an app input, so LG's boot manager starts Cinema++ itself at about 24 s and
+# never reopens Live TV over it; Cinema++ registered with EIM as an app input,
+# and as LG's last input app; then launches until Cinema++ is in front, and a
+# guard that puts it back when LG's last-input handler brings an input over it.
+# Cinema web's own start at power-on is set aside while this is on: its boot
+# hook is kept in /var/lib/tvweb/cinema-web and its "first app" setting off.
+#
+# Installed by deploy.sh as /var/lib/tvweb/cinemapp-first-app; the hook
+# /var/lib/webosbrew/init.d/58-cinemapp-first-app runs it while
+# /var/lib/tvweb/first-app.on exists.
+
+APP_ID="com.tvweb.dashboard"
+LAUNCH="{\"id\":\"$APP_ID\",\"params\":{\"screen\":\"home\"}}"
+CINEMA_ID="org.webosbrew.lounge.launcher"
+D=/var/lib/tvweb
+ON="$D/first-app.on"
+KEPT="$D/cinema-web"
+PINNED="$D/lastinput.pinned"
+LG_LASTINPUT="$D/lastinput.lg"
+LASTINPUT=/var/lib/eim/lastinput
+INITD=/var/lib/webosbrew/init.d
+CINEMA_HOOK="$INITD/50-launch-home-boot"
+CINEMA_ROOT=/var/lib/launch-home-cinema
+CINEMA_CONF="$CINEMA_ROOT/tvtools.json"
+CINEMA_APP=/media/developer/apps/usr/palm/applications/$CINEMA_ID
+LOG=/tmp/cinemapp-first-app.log
+PIDFILE=/tmp/cinemapp-first-app.pid
+
+log() {
+  echo "$(date '+%H:%M:%S' 2>/dev/null) $*" >>"$LOG" 2>/dev/null || true
+}
+
+luna_once() {
+  out=$(luna-send -i -n 1 -w 4000 -f "$1" "$2" 2>/dev/null) && [ -n "$out" ] && {
+    printf '%s' "$out"
+    return 0
+  }
+  out=$(luna-send -n 1 -f "$1" "$2" 2>/dev/null) && {
+    printf '%s' "$out"
+    return 0
+  }
+  return 1
+}
+
+# ---- Cinema web --------------------------------------------------------------
+
+# Cinema's TV tools daemon applies tvtools.json; run once after a change.
+cinema_apply() {
+  for py in "$CINEMA_APP/tvtools.py" "$CINEMA_ROOT/tvtools.py"; do
+    if [ -f "$py" ]; then
+      python "$py" apply >/dev/null 2>&1 || python2 "$py" apply >/dev/null 2>&1
+      return 0
+    fi
+  done
+}
+
+# Cinema's boot hook and its wake watcher (started with setsid: its own group).
+cinema_aside() {
+  if [ -f "$CINEMA_HOOK" ]; then
+    mkdir -p "$KEPT"
+    mv -f "$CINEMA_HOOK" "$KEPT/50-launch-home-boot" && log "Cinema web's boot hook kept aside"
+  fi
+  pid=$(cat /tmp/launch-home-boot.pid 2>/dev/null)
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    kill -TERM "$pid" 2>/dev/null
+    log "Cinema web's wake watcher stopped"
+  fi
+  if [ -f "$CINEMA_CONF" ] && grep -q '"cinemaFirst"[[:space:]]*:[[:space:]]*true' "$CINEMA_CONF"; then
+    mkdir -p "$KEPT"
+    # Its pin goes with it: the free HDMI it chose is kept for Cinema++'s.
+    sed -n 's/.*"physicalLastSourceId":"\(HDMI_[0-9]*\)".*/\1/p' "$CINEMA_ROOT/lastinput.pinned" >"$KEPT/source" 2>/dev/null
+    [ -s "$KEPT/source" ] || rm -f "$KEPT/source"
+    : >"$KEPT/cinemaFirst"
+    sed 's/"cinemaFirst"[[:space:]]*:[[:space:]]*true/"cinemaFirst": false/' "$CINEMA_CONF" >"$CINEMA_CONF.cpp" &&
+      mv -f "$CINEMA_CONF.cpp" "$CINEMA_CONF" && cinema_apply && log "Cinema web's first app turned off"
+  fi
+}
+
+cinema_back() {
+  if [ -f "$KEPT/50-launch-home-boot" ] && [ ! -f "$CINEMA_HOOK" ]; then
+    mv -f "$KEPT/50-launch-home-boot" "$CINEMA_HOOK"
+  fi
+  if [ -f "$KEPT/cinemaFirst" ] && [ -f "$CINEMA_CONF" ]; then
+    sed 's/"cinemaFirst"[[:space:]]*:[[:space:]]*false/"cinemaFirst": true/' "$CINEMA_CONF" >"$CINEMA_CONF.cpp" &&
+      mv -f "$CINEMA_CONF.cpp" "$CINEMA_CONF" && rm -f "$KEPT/cinemaFirst" && cinema_apply
+  fi
+}
+
+# ---- LG's last input ---------------------------------------------------------
+
+pinned() {
+  grep -q " $LASTINPUT " /proc/mounts 2>/dev/null
+}
+
+# The first HDMI with nothing connected, from EIM's devices; DTV when every
+# HDMI is in use. With Live TV as the physical source LG reopened it over
+# Cinema at the end of its boot (Cinema 0.3.9).
+free_input() {
+  luna_once 'luna://com.webos.service.eim/getAllInputStatus' '{}' | tr -d ' \n' |
+    awk 'BEGIN { RS = "}" } /"connected":false/ && match($0, /"id":"HDMI_[0-9]+"/) {
+      print substr($0, RSTART + 6, RLENGTH - 7); exit }'
+}
+
+pin() {
+  [ -f "$LASTINPUT" ] || return 1
+  if [ ! -f "$PINNED" ]; then
+    # Cinema web's choice of a free HDMI, when it made one; else EIM's.
+    src=$(cat "$KEPT/source" 2>/dev/null)
+    [ -n "$src" ] || src=$(free_input)
+    [ -n "$src" ] || src=DTV
+    printf '{"type":"MVPD_IP","appId":"%s","physicalLastSourceId":"%s","physicalLastSourceAppId":"%s"}' \
+      "$APP_ID" "$src" "$APP_ID" >"$PINNED.new" && mv -f "$PINNED.new" "$PINNED"
+  fi
+  pinned && return 0
+  # LG's own, once, to put back on --disable.
+  if [ ! -f "$LG_LASTINPUT" ] && ! grep -q "$APP_ID\|$CINEMA_ID" "$LASTINPUT"; then
+    cp "$LASTINPUT" "$LG_LASTINPUT"
+  fi
+  cmp -s "$PINNED" "$LASTINPUT" || cat "$PINNED" >"$LASTINPUT" || return 1
+  if ! { mount --bind "$PINNED" "$LASTINPUT" && mount -o remount,ro,bind "$LASTINPUT"; }; then
+    umount "$LASTINPUT" 2>/dev/null
+    return 1
+  fi
+  log "last input pinned to Cinema++ ($(sed -n 's/.*"physicalLastSourceId":"\([^"]*\)".*/\1/p' "$PINNED"))"
+}
+
+register() {
+  luna_once 'luna://com.webos.service.eim/addDevice' "{\"appId\":\"$APP_ID\",\"pigImage\":\"\",\"mvpdIcon\":\"\"}" >/dev/null
+  luna_once 'luna://com.webos.settingsservice/setSystemSettings' \
+    "{\"category\":\"general\",\"settings\":{\"lastInputApp\":\"$APP_ID\",\"physicalLastInputApp\":\"$APP_ID\"}}" >/dev/null
+}
+
+unpin() {
+  pinned && umount "$LASTINPUT"
+  if [ -f "$LG_LASTINPUT" ]; then
+    cat "$LG_LASTINPUT" >"$LASTINPUT"
+  elif grep -q "$APP_ID" "$LASTINPUT" 2>/dev/null; then
+    printf '%s' '{"type":"DTV","appId":"com.webos.app.livetv","physicalLastSourceId":"DTV","physicalLastSourceAppId":"com.webos.app.livetv"}' >"$LASTINPUT"
+  fi
+  rm -f "$PINNED" "$LG_LASTINPUT"
+  luna_once 'luna://com.webos.service.eim/deleteDevice' "{\"appId\":\"$APP_ID\"}" >/dev/null
+  luna_once 'luna://com.webos.settingsservice/setSystemSettings' \
+    '{"category":"general","settings":{"lastInputApp":"com.webos.app.livetv","physicalLastInputApp":"com.webos.app.livetv"}}' >/dev/null
+}
+
+# ---- in front ----------------------------------------------------------------
+
+foreground_app() {
+  info=$(luna_once 'luna://com.webos.applicationManager/getForegroundAppInfo' '{"extraInfo":true}' | tr '\n' ' ')
+  printf '%s' "$info" | sed -n 's/.*"appId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+}
+
+launch() {
+  luna_once 'luna://com.webos.applicationManager/launch' "$LAUNCH" >/dev/null 2>&1 || true
+}
+
+# Launch until Cinema++ is in front on two checks in a row; right after a boot
+# or a wake the app manager can answer and drop the first launches.
+bring_up() {
+  tries=0
+  seen=0
+  while [ "$tries" -lt "$1" ]; do
+    tries=$((tries + 1))
+    fg=$(foreground_app)
+    if [ "$fg" = "$APP_ID" ]; then
+      seen=$((seen + 1))
+      [ "$seen" -ge 2 ] && log "Cinema++ in front" && return 0
+    else
+      seen=0
+      log "launch $tries (front: ${fg:-none})"
+      launch
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+# For $1 seconds, Cinema++ back in front when an input (or Cinema web, started
+# by its own leftovers) takes it; any other app is the owner's choice.
+guard_front() {
+  until=$(($(cut -d. -f1 /proc/uptime) + $1))
+  while [ "$(cut -d. -f1 /proc/uptime)" -lt "$until" ]; do
+    sleep 2
+    fg=$(foreground_app)
+    case "$fg" in
+      "$APP_ID" | "") ;;
+      "$CINEMA_ID" | com.webos.app.livetv | com.webos.app.hdmi* | com.webos.app.inputcommon | com.webos.app.externalinput.*)
+        log "$fg came over Cinema++, launching it again"
+        launch
+        ;;
+      *)
+        log "guard over: $fg opened"
+        return 0
+        ;;
+    esac
+  done
+}
+
+# tvpower's state by subscription (never its prepare hooks: they turn every
+# standby into a full reboot). Cinema++ comes back on Suspend/Active Standby ->
+# Active, unless the TV woke on an input (CEC from a console or decoder).
+watch_wakes() {
+  while true; do
+    started=$(cut -d. -f1 /proc/uptime)
+    luna-send -i -f 'luna://com.webos.service.tvpower/power/getPowerState' '{"subscribe":true}' 2>/dev/null | {
+      last=""
+      buf=""
+      while IFS= read -r line; do
+        buf="$buf $line"
+        [ "$line" = "}" ] || continue
+        state=$(printf '%s' "$buf" | sed -n 's/.*"state"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+        buf=""
+        [ -n "$state" ] && [ "$state" != "$last" ] || continue
+        log "power: ${last:-?} -> $state"
+        if [ "$state" = "Active" ]; then
+          case "$last" in
+            Suspend | "Active Standby")
+              case "$(foreground_app)" in
+                com.webos.app.livetv | com.webos.app.hdmi* | com.webos.app.inputcommon | com.webos.app.externalinput.*)
+                  log "woke on an input: left alone" ;;
+                *) bring_up 15 && guard_front 40 ;;
+              esac
+              ;;
+          esac
+        fi
+        last=$state
+      done
+    } &
+    wait $!
+    # A subscription that dies at once is not coming back soon: no spinning.
+    if [ $(($(cut -d. -f1 /proc/uptime) - started)) -lt 5 ]; then sleep 60; else sleep 5; fi
+  done
+}
+
+# Every minute: opening Cinema web puts its boot hook back (it rewrites it at every start):
+# set it aside again, and keep the pin, which Cinema's TV tools unmount when they apply their
+# settings (seen right after a boot).
+keep_up() {
+  while true; do
+    sleep 60
+    [ -f "$ON" ] || exit 0
+    [ -f "$CINEMA_HOOK" ] && cinema_aside
+    pin
+  done
+}
+
+boot() {
+  [ -f "$ON" ] || exit 0
+  if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    exit 0
+  fi
+  echo $$ >"$PIDFILE"
+  trap 'kill 0; rm -f "$PIDFILE"; exit 0' INT TERM HUP
+  log "start"
+  i=0
+  while [ "$i" -lt 90 ]; do
+    luna_once 'luna://com.webos.applicationManager/getForegroundAppInfo' '{}' | grep -q returnValue && break
+    i=$((i + 1))
+    sleep 2
+  done
+  cinema_aside
+  pin
+  register
+  [ "$1" = "--wake-only" ] || { bring_up 30 && guard_front 120; }
+  keep_up &
+  watch_wakes
+}
+
+case "$1" in
+  --enable)
+    mkdir -p "$D"
+    : >"$ON"
+    cinema_aside
+    if ! pin; then
+      echo "could not pin the last input"
+      exit 1
+    fi
+    register
+    echo enabled
+    (setsid "$0" --boot --wake-only </dev/null >/dev/null 2>&1 &)
+    ;;
+  --disable)
+    rm -f "$ON"
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    [ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null
+    unpin
+    cinema_back
+    echo disabled
+    ;;
+  --boot) shift; boot "$@" ;;
+  --status) if [ -f "$ON" ]; then echo on; else echo off; fi ;;
+  *) echo "usage: $0 --enable | --disable | --boot | --status" >&2; exit 2 ;;
+esac

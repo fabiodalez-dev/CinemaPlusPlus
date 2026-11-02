@@ -1,0 +1,13 @@
+#!/bin/sh
+# Cinema++ as the first app at power-on: while /var/lib/tvweb/first-app.on
+# exists (Settings > Server, or cinemapp-first-app --enable). Installed by
+# deploy.sh to /var/lib/webosbrew/init.d/58-cinemapp-first-app. Never blocks
+# boot: the script runs detached in its own session.
+FIRST=/var/lib/tvweb/cinemapp-first-app
+[ -f /var/lib/tvweb/first-app.on ] && [ -x "$FIRST" ] || exit 0
+if command -v setsid >/dev/null 2>&1; then
+  setsid "$FIRST" --boot </dev/null >/dev/null 2>&1 &
+else
+  "$FIRST" --boot </dev/null >/dev/null 2>&1 &
+fi
+exit 0
