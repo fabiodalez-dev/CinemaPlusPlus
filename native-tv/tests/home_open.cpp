@@ -69,6 +69,10 @@ int main() {
     plan = planHomeOpen("jellyfin", title, apps, devices, channels, "", "com.example.other");
     assert(plan.ok && plan.appId == "org.litefin.app"); // not a Jellyfin client
 
+    // Scopri: LiteFin on its Discover page.
+    plan = planHomeOpen("discover", "seerr", apps, devices, channels);
+    assert(plan.ok && plan.appId == "org.litefin.app" && plan.launchParams["cinemaPage"].string() == "discover");
+
     // Only what the catalogue lists can be opened.
     plan = planHomeOpen("app", "com.example.unknown", apps, devices, channels);
     assert(plan.handled && !plan.ok);

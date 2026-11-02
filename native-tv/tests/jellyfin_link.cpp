@@ -82,11 +82,15 @@ int main() {
     check(link.unlink(error) && link.status()["state"].string() == "unlinked", "unlinked");
     // Jellyfin's discovery replies.
     const Json found = service::JellyfinLink::parseDiscovery(
-        R"({"Address":"http://192.168.1.10:8096","Id":"abc","Name":"Casa","EndpointAddress":null})");
+        R"({"Address":"http://192.168.1.10:8096","Id":"abc","Name":"Casa","EndpointAddress":null})", "192.168.1.10");
     check(found["name"].string() == "Casa" && found["address"].string() == "http://192.168.1.10:8096",
           "a discovery reply");
-    check(!service::JellyfinLink::parseDiscovery("not json").valid() &&
-              !service::JellyfinLink::parseDiscovery(R"({"Name":"x"})").valid(),
+    check(service::JellyfinLink::parseDiscovery(R"({"Address":"https://evil.example:9000/jf","Name":"x"})",
+                                                "192.168.1.20")["address"].string() == "http://192.168.1.20:9000/jf",
+          "the host is where the reply came from");
+    check(!service::JellyfinLink::parseDiscovery("not json", "192.168.1.10").valid() &&
+              !service::JellyfinLink::parseDiscovery(R"({"Name":"x"})", "192.168.1.10").valid() &&
+              !service::JellyfinLink::parseDiscovery(R"({"Address":"http://a:80/x?y"})", "192.168.1.10").valid(),
           "anything else is not a server");
     rmdir(dir.c_str());
     std::cout << "jellyfin link tests passed\n";

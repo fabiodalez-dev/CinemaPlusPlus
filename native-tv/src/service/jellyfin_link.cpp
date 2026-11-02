@@ -257,14 +257,27 @@ Json JellyfinLink::status() const {
     return result;
 }
 
-Json JellyfinLink::parseDiscovery(const std::string &reply) {
+Json JellyfinLink::parseDiscovery(const std::string &reply, const std::string &sourceIp) {
     const Json data = Json::parse(reply);
-    const std::string address = normalizeServer(data["Address"].string());
-    if (address.empty() || address.compare(0, 4, "http") != 0) return Json();
+    const std::string advertised = normalizeServer(data["Address"].string());
+    in_addr parsed = {};
+    if (advertised.empty() || inet_pton(AF_INET, sourceIp.c_str(), &parsed) != 1) return Json();
+    // The port, and a path such as /jellyfin, from the reply; the host is where it came from.
+    const size_t hostStart = advertised.find("://") + 3;
+    const size_t pathStart = advertised.find('/', hostStart);
+    const std::string hostPort = advertised.substr(hostStart, pathStart == std::string::npos ? std::string::npos
+                                                                                             : pathStart - hostStart);
+    const size_t colon = hostPort.rfind(':');
+    std::string port = colon == std::string::npos ? "8096" : hostPort.substr(colon + 1);
+    if (port.empty() || port.size() > 5 || port.find_first_not_of("0123456789") != std::string::npos) return Json();
+    std::string path = pathStart == std::string::npos ? "" : advertised.substr(pathStart);
+    for (char c : path)
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '/' && c != '-' && c != '_' && c != '.') return Json();
     Json server = Json::object();
-    server.set("name", Json::text(data["Name"].string(address)));
+    const std::string address = "http://" + sourceIp + ":" + port + path;
+    server.set("name", Json::text(data["Name"].string(address).substr(0, 60)));
     server.set("address", Json::text(address));
-    server.set("id", Json::text(data["Id"].string()));
+    server.set("id", Json::text(data["Id"].string().substr(0, 64)));
     return server;
 }
 
@@ -293,9 +306,13 @@ Json JellyfinLink::discover(int waitMs) {
         timeval wait = {static_cast<long>(left.count() / 1000000), static_cast<int>(left.count() % 1000000)};
         if (select(sock + 1, &ready, nullptr, nullptr, &wait) <= 0) break;
         char buffer[2048];
-        const ssize_t count = recv(sock, buffer, sizeof buffer, 0);
-        if (count <= 0) continue;
-        const Json server = parseDiscovery(std::string(buffer, static_cast<size_t>(count)));
+        sockaddr_in from = {};
+        socklen_t fromSize = sizeof from;
+        const ssize_t count = recvfrom(sock, buffer, sizeof buffer, 0, reinterpret_cast<sockaddr *>(&from), &fromSize);
+        if (count <= 0 || from.sin_family != AF_INET) continue;
+        char ip[INET_ADDRSTRLEN] = {};
+        if (!inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip)) continue;
+        const Json server = parseDiscovery(std::string(buffer, static_cast<size_t>(count)), ip);
         bool seen = !server.valid();
         for (const Json &known : servers.items())
             seen = seen || known["address"].string() == server["address"].string();

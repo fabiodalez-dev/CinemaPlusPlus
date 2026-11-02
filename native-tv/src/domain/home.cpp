@@ -113,6 +113,9 @@ std::vector<Tab> homeTabs(const Json &catalogue, const Json &discover) {
     if (has[0]) tabs.push_back({"movies", say::msg("tv.home.tab.movies", "Films"), Operation::None});
     if (has[1]) tabs.push_back({"series", say::msg("tv.home.tab.series", "Series"), Operation::None});
     if (has[2]) tabs.push_back({"music", say::msg("tv.home.tab.music", "Music"), Operation::None});
+    // Cinema's Scopri, with the library linked.
+    if (has[0] || has[1] || discover["seerr"].isObject())
+        tabs.push_back({"discover", say::msg("tv.home.tab.discover", "Discover"), Operation::None});
     if (catalogue["layout"]["showLive"].boolean() &&
         catalogue["sources"]["channels"].number(-1) != 0)
         tabs.push_back({"live", say::msg("tv.home.tab.live", "Live"), Operation::None});
@@ -287,6 +290,36 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
         for (const CardRow &row : appRows(catalogue, guide, "appsTab"))
             if (!row.cards.empty())
                 result.push_back(row);
+        return result;
+    }
+    if (tab == "discover") {
+        // Cinema's Scopri: requests through Seerr in LiteFin, with what is still to set up.
+        const Json seerr = discover["seerr"];
+        const bool ready = seerr["configured"].boolean() && seerr["available"].boolean();
+        CardRow row;
+        row.key = "shortcuts";
+        row.title = say::msg("tv.home.tab.discover", "Discover");
+        Card open;
+        open.id = "discover:open";
+        open.kind = "app";
+        open.title = say::msg("tv.discover.open", "Find something new");
+        open.subtitle = ready ? say::msg("tv.discover.ready", "Search and request titles with Seerr")
+                        : seerr["plugin"].isBoolean() && !seerr["plugin"].boolean()
+                            ? say::msg("tv.discover.noPlugin", "Needs LiteFin Companion on the server")
+                            : say::msg("tv.discover.setup", "Set up Seerr in LiteFin Companion");
+        open.data = Json::object();
+        open.data.set("icon", Json::text("star"));
+        open.command = post(Operation::OpenHomeItem, fields({{"kind", Json::text("discover")}, {"id", Json::text("seerr")}}));
+        row.cards.push_back(open);
+        for (const Card &card : catalogueRow("app", catalogue, guide).cards)
+            if (card.id == "org.litefin.app" || card.id == "org.moonfin.webos") {
+                Card app = card;
+                app.id = "discover:" + card.id;
+                app.subtitle = say::msg("tv.discover.library", "Your library and its requests");
+                app.data.set("icon", Json::text("movie"));
+                row.cards.push_back(app);
+            }
+        result.push_back(row);
         return result;
     }
     if (tab == "movies" || tab == "series" || tab == "music") {

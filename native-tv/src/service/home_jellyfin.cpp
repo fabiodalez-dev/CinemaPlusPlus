@@ -265,6 +265,19 @@ void HomeJellyfin::refresh() {
         result.set("state", Json::text(unauthorized ? "unauthorized" : sAll == 200 ? "online" : "offline"));
         result.set("user", Json::text(c.userName));
         result.set("rows", rows);
+        // Scopri as on Cinema: Seerr behind LiteFin Companion on the server, when it is set up.
+        Json seerr;
+        long sSeerr = 0;
+        Json status = Json::object();
+        if (getJson(c, "/Litefin/Seerr/Status", seerr, sSeerr) && sSeerr == 200) {
+            status.set("configured", Json::flag(seerr["configured"].boolean()));
+            status.set("available", Json::flag(seerr["available"].boolean()));
+        } else {
+            status.set("configured", Json::flag(false));
+            status.set("available", Json::flag(false));
+            status.set("plugin", Json::flag(false));
+        }
+        result.set("seerr", status);
         // Offline keeps the last rows Home had.
         if (sAll != 200 && !unauthorized) {
             std::lock_guard<std::mutex> lock(mutex_);

@@ -124,6 +124,20 @@ HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
         plan.error = say::msg("srv.home.noJellyfin", "No Jellyfin app is installed on this TV");
         return plan;
     }
+    if (kind == "discover") {
+        // Scopri as on Cinema: LiteFin opens its own Discover page (Seerr), Moonfin its library.
+        for (const char *client : {"org.litefin.app", "org.moonfin.webos"}) {
+            if (!findListed(apps, client).valid()) continue;
+            setLaunch(plan, client);
+            if (std::string(client) == "org.litefin.app") {
+                plan.launchParams = Json::object();
+                plan.launchParams.set("cinemaPage", Json::text("discover"));
+            }
+            return plan;
+        }
+        plan.error = say::msg("srv.home.noDiscover", "Scopri needs LiteFin or Moonfin, from Homebrew Channel");
+        return plan;
+    }
     if (kind == "youtube") {
         if (!validYouTubeId(id)) return plan;
         if (!findListed(apps, kYouTubeApp).valid()) {

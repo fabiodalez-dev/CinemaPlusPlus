@@ -39,8 +39,10 @@ class JellyfinLink {
     // The Jellyfin servers on the home network, by Jellyfin's own discovery (a UDP broadcast of
     // "Who is JellyfinServer?" to port 7359): [{"name", "address"}], within waitMs.
     static Json discover(int waitMs = 1500);
-    // A discovery reply as Jellyfin sends it ({"Address", "Id", "Name"}); invalid when it is not one.
-    static Json parseDiscovery(const std::string &reply);
+    // A discovery reply as Jellyfin sends it ({"Address", "Id", "Name"}) from `sourceIp`; invalid
+    // when it is not one. The address is the one the reply came from, with the port the reply
+    // names: a reply cannot point the TV at another host.
+    static Json parseDiscovery(const std::string &reply, const std::string &sourceIp);
 
     // Exposed for the tests: "jf.local:8096/" becomes "http://jf.local:8096".
     static std::string normalizeServer(const std::string &server);

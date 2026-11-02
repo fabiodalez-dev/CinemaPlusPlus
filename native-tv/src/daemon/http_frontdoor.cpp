@@ -17340,6 +17340,7 @@ void HttpFrontDoor::sendHomeDiscover(HttpExchange &exchange) const {
         result.set("rows", rows);
     }
     result.set("jellyfin", Json::text(jellyfin["state"].string("unconfigured")));
+    if (jellyfin["seerr"].isObject()) result.set("seerr", jellyfin["seerr"]);
     result.set("weather", homeWeather_.feed());
     // Search finds titles in the library too, with or without TMDB.
     if (jellyfin["state"].string() == "online")
@@ -18281,7 +18282,7 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     Json apps;
     Json devices;
     Json channels;
-    if (kind == "app" || kind == "youtube" || kind == "netflix" || kind == "jellyfin") {
+    if (kind == "app" || kind == "youtube" || kind == "netflix" || kind == "jellyfin" || kind == "discover") {
         apps = homeCatalogueAppsSnapshot();
     } else if (kind == "dev") {
         devices = homeCatalogueDevicesSnapshot();
