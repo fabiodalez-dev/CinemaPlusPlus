@@ -1384,50 +1384,55 @@ void homeSettings(Rows &rows, const Json &data, const std::string &sub) {
             say::msg("tv.jf.desc", "Your Jellyfin library on Home, linked with Quick Connect: no password typed."),
             say::msg("tv.settings.open", "Open"));
     }
-    if (data["supported"].valid() && !data["supported"]["ok"].boolean() &&
+    // Cinema++ (the service reports Jellyfin's link) is Home on any webOS: Native Tv's own Home and
+    // its power-on rows, for webOS 9 and 10, give way to the layout rows that follow.
+    const bool cinemapp = data["jellyfinLink"].isObject();
+    if (!cinemapp && data["supported"].valid() && !data["supported"]["ok"].boolean() &&
         !data["enabled"].boolean()) {
         row(rows, say::msg("home.unavailable", "Not available on this TV"), "", Command(),
             data["supported"]["reason"].string());
         return;
     }
-    bool enabled = data["enabled"].boolean();
-    row(rows, say::msg("home.title", "Native Tv Home"), on(enabled),
-        writable
-            ? post(enabled ? Operation::DisableHome : Operation::EnableHome, Json::object(), true)
-            : Command(),
-        enabled
-            ? say::msg("home.isOnDesc", "It opens in LG’s Home’s place: with the Home and Back "
-                                        "buttons, and when the TV wakes on Home.")
-            : say::msg("home.isOffDesc", "Nothing of LG’s is changed: Native Tv Home is laid over "
-                                         "LG’s Home while on, and switching off takes it away."),
-        "", enabled ? 1 : 0)
-        .reverse = post(enabled ? Operation::EnableHome : Operation::DisableHome, Json::object());
-    if (data["hideLgHomeAtStartAvailable"].boolean(true))
-        row(rows, say::msg("home.hideLg", "Hide LG’s Home while the TV starts"),
-            on(data["hideLgHomeAtStart"].boolean()),
-            writable ? post(Operation::SetHomeStartLayout,
-                            fields({{"hideLgHomeAtStart",
-                                     Json::flag(!data["hideLgHomeAtStart"].boolean())}}),
-                            !data["hideLgHomeAtStart"].boolean())
-                     : Command(),
-            say::msg("home.hideLgDesc",
-                     "For about 25 seconds after a cold start, until Native Tv Home takes its "
-                     "place, LG’s Home opens as a black screen instead of its own. If Native Tv "
-                     "stops running, for example after a firmware update removes root, LG’s Home "
-                     "stays black until it is put back over SSH."),
-            "", data["hideLgHomeAtStart"].boolean() ? 1 : 0);
-    row(rows, say::msg("home.startup", "Power-on screen"),
-        data["openOnPowerOn"].boolean() ? say::msg("home.startupNativeTv", "Native Tv Home")
-                                        : say::msg("home.startupLg", "Follow LG setting"),
-        writable && enabled
-            ? post(Operation::SetHomeStartup,
-                   fields({{"openOnPowerOn", Json::flag(!data["openOnPowerOn"].boolean())}}))
-            : Command(),
-        say::msg("home.startupDesc",
-                 "Choose Native Tv Home to skip LG Home and open it when ready, or follow LG's "
-                 "power-on setting. Full shutdown still needs time to start. Choosing another app "
-                 "or input cancels the automatic opening."),
-        "", data["openOnPowerOn"].boolean() ? 1 : 0);
+    if (!cinemapp) {
+        bool enabled = data["enabled"].boolean();
+        row(rows, say::msg("home.title", "Native Tv Home"), on(enabled),
+            writable
+                ? post(enabled ? Operation::DisableHome : Operation::EnableHome, Json::object(), true)
+                : Command(),
+            enabled
+                ? say::msg("home.isOnDesc", "It opens in LG’s Home’s place: with the Home and Back "
+                                            "buttons, and when the TV wakes on Home.")
+                : say::msg("home.isOffDesc", "Nothing of LG’s is changed: Native Tv Home is laid over "
+                                             "LG’s Home while on, and switching off takes it away."),
+            "", enabled ? 1 : 0)
+            .reverse = post(enabled ? Operation::EnableHome : Operation::DisableHome, Json::object());
+        if (data["hideLgHomeAtStartAvailable"].boolean(true))
+            row(rows, say::msg("home.hideLg", "Hide LG’s Home while the TV starts"),
+                on(data["hideLgHomeAtStart"].boolean()),
+                writable ? post(Operation::SetHomeStartLayout,
+                                fields({{"hideLgHomeAtStart",
+                                         Json::flag(!data["hideLgHomeAtStart"].boolean())}}),
+                                !data["hideLgHomeAtStart"].boolean())
+                         : Command(),
+                say::msg("home.hideLgDesc",
+                         "For about 25 seconds after a cold start, until Native Tv Home takes its "
+                         "place, LG’s Home opens as a black screen instead of its own. If Native Tv "
+                         "stops running, for example after a firmware update removes root, LG’s Home "
+                         "stays black until it is put back over SSH."),
+                "", data["hideLgHomeAtStart"].boolean() ? 1 : 0);
+        row(rows, say::msg("home.startup", "Power-on screen"),
+            data["openOnPowerOn"].boolean() ? say::msg("home.startupNativeTv", "Native Tv Home")
+                                            : say::msg("home.startupLg", "Follow LG setting"),
+            writable && enabled
+                ? post(Operation::SetHomeStartup,
+                       fields({{"openOnPowerOn", Json::flag(!data["openOnPowerOn"].boolean())}}))
+                : Command(),
+            say::msg("home.startupDesc",
+                     "Choose Native Tv Home to skip LG Home and open it when ready, or follow LG's "
+                     "power-on setting. Full shutdown still needs time to start. Choosing another app "
+                     "or input cancels the automatic opening."),
+            "", data["openOnPowerOn"].boolean() ? 1 : 0);
+    }
     page(rows, say::msg("tv.appearance.head.appearance", "Appearance"));
     head(rows, say::msg("tv.appearance.head.appearance", "Appearance"));
     struct Switch {

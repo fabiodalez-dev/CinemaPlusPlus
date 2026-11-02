@@ -1885,7 +1885,7 @@
 <ul class="sub" id="custom-list"></ul>
 <div class="setting-row"><label for="custom-name" data-t="custom.name">Name</label><input id="custom-name" maxlength="60"></div>
 <div class="setting-row"><label for="custom-app" data-t="custom.app">App</label><select id="custom-app" class="pill-sel"></select></div>
-<div class="setting-row"><label for="custom-params" data-t="custom.params">Launch parameters (JSON, optional)</label><input id="custom-params" maxlength="1024" placeholder='{"contentTarget":"https://www.youtube.com/tv#/channel?c=..."}'></div>
+<div class="setting-row"><label for="custom-params" data-t="custom.params">Launch parameters (JSON, optional)</label><input id="custom-params" maxlength="1024" translate="no" placeholder='{"contentTarget":"https://www.youtube.com/tv#/channel?c=..."}'></div>
 <div class="setting-row"><button type="button" class="btn btn-tonal" onclick="customAdd()" data-t="custom.add">Add the tile</button></div>
 <div class="sub" id="custom-msg" role="status"></div>
 </article>
@@ -1907,8 +1907,8 @@
 <div class="setting-row" id="wall-interval-row" hidden>
             <label for="wall-interval" data-t="wall.interval">Change picture every</label>
             <select id="wall-interval" class="pill-sel" onchange="wallSourceSave({ interval: Number(this.value) })">
-              <option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option>
-              <option value="30">30 min</option><option value="60">60 min</option><option value="1440">24 h</option>
+              <option value="1" translate="no">1 min</option><option value="5" translate="no">5 min</option><option value="10" translate="no">10 min</option>
+              <option value="30" translate="no">30 min</option><option value="60" translate="no">60 min</option><option value="1440" translate="no">24 h</option>
             </select>
           </div>
 <div class="setting-row">
@@ -2078,7 +2078,7 @@
       <section class="panel grid" id="musicpane" role="tabpanel" hidden>
         <div class="card" style="--p:2;--t:4;--d:12">
           <h2 data-t="music.title">Music on Home</h2>
-          <p class="sub" data-t="music.desc">Quiet music while Home is on screen, as on Cinema: it fades in, stops when an app, live TV or an input opens, and comes back with Home. On the remote, Green plays the next track and Red pauses./p>
+          <p class="sub" data-t="music.desc">Quiet music while Home is on screen, as on Cinema: it fades in, stops when an app, live TV or an input opens, and comes back with Home. On the remote, Green plays the next track and Red pauses.</p>
           <div class="setting-row">
             <label for="music-enabled" data-t="music.enabled">Play music on Home</label>
             <input type="checkbox" id="music-enabled" onchange="musicSave({ enabled: this.checked })">

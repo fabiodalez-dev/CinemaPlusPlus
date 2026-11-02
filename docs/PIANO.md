@@ -73,7 +73,7 @@ Impostazioni a schermo intero come in Cinema, backup e ripristino, diagnostica, 
 
 ### 6. Il passaggio
 
-Fatto il 2 novembre 2026: tasto Home su Cinema++, servizio a ogni accensione (`57-cinemapp-service`), aggiornamenti dalle release GitHub con SHA-256 (`deploy.sh --release=DIR`), diagnostica, backup di meteo e musica. Poi, lo stesso giorno, Cinema++ come prima app all'accensione e al risveglio, con il meccanismo di Cinema (ultimo ingresso di LG bloccato su Cinema++ come ingresso app, registrazione in EIM, guardia contro la TV live) e l'avvio di Cinema web messo da parte: dopo un riavvio la TV è su «Per te» di Cinema++ a 42 secondi. Prima release pubblicata: 0.1.0.
+Fatto il 2 novembre 2026: tasto Home su Cinema++, servizio a ogni accensione (`57-cinemapp-service`), aggiornamenti dalle release GitHub con SHA-256 (`deploy.sh --release=DIR`), diagnostica, backup di meteo e musica. Poi, lo stesso giorno, Cinema++ come prima app all'accensione e al risveglio, con il meccanismo di Cinema (ultimo ingresso di LG bloccato su Cinema++ come ingresso app, registrazione in EIM, guardia contro la TV live) e l'avvio di Cinema web messo da parte: dopo un riavvio la TV è su «Per te» di Cinema++ a 42 secondi. Prima release pubblicata: 0.1.0. La 0.2.0, lo stesso giorno, chiude quasi tutto l'elenco di parità: vista essenziale col tasto giallo, Quick Connect dalla TV, Scopri, tessere personalizzate, fonti di sfondo di Cinema, ambienti Notte e Cinema, colore del focus, `config.json` della chiavetta USB. Restano i video aerei come sfondo della Home e l'assistente vocale.
 
 Cinema++ diventa la home al posto di Cinema: tasto Home, apertura all'accensione, impostazioni importate da `tvtools.json` e dalle preferenze di Cinema. Poi Cinema web si può disinstallare.
 

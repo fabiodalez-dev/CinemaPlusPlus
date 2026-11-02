@@ -595,8 +595,9 @@ void drawHome(kit::Paint paint, const Frame &frame) {
             scene.popClip();
         if (home.rows.empty())
             paint.glyphs.text(scene, {kit::canvas::safeX, 800, 1600, kit::type::body.line},
-                              state.catalogue.valid() ? "No items to show. Open Settings to arrange Home."
-                                                      : "Loading Home…",
+                              state.catalogue.valid()
+                                  ? say::msg("tv.home.empty", "No items to show. Open Settings to arrange Home.")
+                                  : say::msg("tv.home.loading", "Loading Home…"),
                               kit::type::body, kit::color::onSurface2);
     }
     if (home.editing && home.row < home.rows.size() && home.column < home.rows[home.row].cards.size()) {
