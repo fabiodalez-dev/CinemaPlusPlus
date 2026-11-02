@@ -53,6 +53,8 @@ Stato al 1° novembre 2026: fatta. `nativetv-ambilight` (in `native-tv/src/ambil
 
 Primo passo, 1° novembre 2026: Native Tv Home gira sulla 43UN70006LA con webOS 5.6 lanciando `com.tvweb.dashboard` con `{"screen":"home"}` (OpenGL ES 3.2 sulla Mali, 17 MB). Su webOS 5 non c'è una home di LG da sostituire (la presa di controllo di Native Tv vale per webOS 9 e 10): Cinema++ si apre come Cinema, con il tasto Home tramite LG Input Hook e all'accensione tramite l'ultimo ingresso.
 
+Stato al 2 novembre 2026: la Home di Cinema++ è in italiano, con le righe della libreria Jellyfin, le schede Film, Serie e Musica, il meteo e la data accanto all'orologio, lo sfondo nebulosa, le tessere Tutte le app e Impostazioni TV e i tasti numerici. La TV live gira dentro la Home: l'app crea una finestra video esportata (SDL per webOS) e il servizio apre il sintonizzatore con `com.webos.service.utp.broadcast`, come fa il browser con `tv://`, attraverso un solo client del bus che resta aperto; gli ingressi HDMI allo stesso modo con `utp.extinputs`. Musica ambiente con il servizio media di LG, salvaschermo Cinema al posto di quello di LG, tasto Home su Cinema++ con LG Input Hook. Misure sulla TV: app 16-19 MB, servizio 8-11 MB, CPU a riposo 1,2% di un core. L'elenco voce per voce è in `docs/PARITA.md`.
+
 
 - barra delle app Estesa o Compatta, ingressi HDMI con «Nessun segnale»;
 - Live TV dietro i controlli, a schermo intero, cambio canale con CH+ e CH−;
@@ -70,6 +72,8 @@ Primo passo, 1° novembre 2026: Native Tv Home gira sulla 43UN70006LA con webOS 
 Impostazioni a schermo intero come in Cinema, backup e ripristino, diagnostica, assistente vocale opzionale.
 
 ### 6. Il passaggio
+
+Fatto il 2 novembre 2026: tasto Home su Cinema++, servizio a ogni accensione (`57-cinemapp-service`), aggiornamenti dalle release GitHub con SHA-256 (`deploy.sh --release=DIR`), diagnostica, backup di meteo e musica. Restano Cinema++ come prima app all'accensione, che va provato con un riavvio, e la prima release pubblicata.
 
 Cinema++ diventa la home al posto di Cinema: tasto Home, apertura all'accensione, impostazioni importate da `tvtools.json` e dalle preferenze di Cinema. Poi Cinema web si può disinstallare.
 
