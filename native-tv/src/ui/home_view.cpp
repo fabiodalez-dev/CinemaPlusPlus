@@ -566,10 +566,15 @@ void drawHome(kit::Paint paint, const Frame &frame) {
             appRows(paint, frame);
     } else {
         kit::Hero hero = heroOf(frame);
-        kit::heroWall(paint, hero);
+        // Cinema's essential view: the wallpaper, the apps and the inputs, no hero.
+        const bool essential = state.catalogue["layout"]["essential"].boolean() &&
+                               home.tabs[home.tab].key == "home";
+        if (!essential)
+            kit::heroWall(paint, hero);
         ambienceVeil(scene, state);
-        kit::heroText(paint, hero);
-        if (home.spotlight.size() > 1) {
+        if (!essential)
+            kit::heroText(paint, hero);
+        if (!essential && home.spotlight.size() > 1) {
             kit::Pagination dots;
             dots.count = static_cast<int>(home.spotlight.size());
             for (int i = 0; i < dots.count; ++i)

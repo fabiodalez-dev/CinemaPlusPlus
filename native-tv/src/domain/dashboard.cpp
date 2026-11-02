@@ -1320,8 +1320,70 @@ void homeSettings(Rows &rows, const Json &data, const std::string &sub) {
         }
         return;
     }
+    if (sub == "jellyfin") {
+        // Quick Connect from the TV, as on Cinema: pick a server found on the home network, then
+        // approve the code in a Jellyfin app signed in to it.
+        const Json link = data["jellyfinLink"];
+        const std::string state = link["state"].string();
+        head(rows, "Jellyfin");
+        if (state == "linked") {
+            row(rows, say::msg("tv.jf.linked", "Linked"), link["server"].string(), Command(),
+                say::msg("tv.jf.linkedAs", "Signed in as {user}. Home shows this library's rows.",
+                         fields({{"user", Json::text(link["user"].string())}})));
+            row(rows, say::msg("tv.jf.unlink", "Unlink"), "",
+                writable ? post(Operation::JellyfinLink, fields({{"action", Json::text("unlink")}}), true) : Command(),
+                say::msg("tv.jf.unlinkDesc", "Home forgets this server; the library stays as it is."),
+                say::msg("tv.jf.unlink", "Unlink"));
+        } else if (state == "waiting") {
+            row(rows, say::msg("tv.jf.code", "Code"), link["code"].string(), Command(),
+                say::msg("tv.jf.codeDesc",
+                         "In a Jellyfin app signed in to {server}: Settings, Quick Connect, this code. "
+                         "{n} s left.",
+                         fields({{"server", Json::text(link["server"].string())},
+                                 {"n", Json::text(std::to_string(static_cast<int>(link["expiresInS"].number())))}})));
+            row(rows, say::msg("tv.jf.cancel", "Cancel"), "",
+                post(Operation::JellyfinLink, fields({{"action", Json::text("cancel")}})));
+        }
+        if (state != "waiting") {
+            // The server already used, wherever it is: a new code without typing its address.
+            if (!link["server"].string().empty())
+                row(rows, say::msg("tv.jf.relink", "Link again"), link["server"].string(),
+                    writable ? post(Operation::JellyfinLink, fields({{"action", Json::text("start")},
+                                                                    {"server", link["server"]}}))
+                             : Command(),
+                    say::msg("tv.jf.relinkDesc", "A new code for the server Home uses now, for another user too."),
+                    say::msg("tv.jf.connect", "Connect"));
+            head(rows, say::msg("tv.jf.servers", "Servers on this network"));
+            for (const Json &server : data["jellyfinServers"].items())
+                row(rows, server["name"].string(), server["address"].string(),
+                    writable ? post(Operation::JellyfinLink, fields({{"action", Json::text("start")},
+                                                                    {"server", server["address"]}}))
+                             : Command(),
+                    say::msg("tv.jf.serverDesc", "Shows a code to approve in a Jellyfin app."),
+                    say::msg("tv.jf.connect", "Connect"));
+            if (!data["jellyfinServers"].size())
+                row(rows, say::msg("tv.jf.searching", "Looking for Jellyfin servers…"), "", navigate("refresh"),
+                    say::msg("tv.jf.searchingDesc",
+                             "None found yet. Jellyfin must be on the same network; a server elsewhere is "
+                             "linked from the browser dashboard, Apps, Jellyfin."),
+                    say::msg("tv.native.retry", "Try again"));
+        }
+        if (!link["error"].string().empty())
+            row(rows, say::msg("tv.jf.error", "Last answer"), "", Command(), link["error"].string());
+        return;
+    }
     page(rows, say::msg("home.title", "Native Tv Home"));
     head(rows, say::msg("home.title", "Native Tv Home"));
+    if (data["jellyfinLink"].isObject()) {
+        const std::string state = data["jellyfinLink"]["state"].string();
+        row(rows, "Jellyfin",
+            state == "linked" ? data["jellyfinLink"]["server"].string()
+            : state == "waiting" ? data["jellyfinLink"]["code"].string()
+                                 : say::msg("tv.jf.notLinked", "Not linked"),
+            navigate("sub:jellyfin"),
+            say::msg("tv.jf.desc", "Your Jellyfin library on Home, linked with Quick Connect: no password typed."),
+            say::msg("tv.settings.open", "Open"));
+    }
     if (data["supported"].valid() && !data["supported"]["ok"].boolean() &&
         !data["enabled"].boolean()) {
         row(rows, say::msg("home.unavailable", "Not available on this TV"), "", Command(),

@@ -80,6 +80,14 @@ int main() {
     now += 11 * 60 * 1000;
     check(!link.poll(error) && error.find("expired") != std::string::npos, "expired");
     check(link.unlink(error) && link.status()["state"].string() == "unlinked", "unlinked");
+    // Jellyfin's discovery replies.
+    const Json found = service::JellyfinLink::parseDiscovery(
+        R"({"Address":"http://192.168.1.10:8096","Id":"abc","Name":"Casa","EndpointAddress":null})");
+    check(found["name"].string() == "Casa" && found["address"].string() == "http://192.168.1.10:8096",
+          "a discovery reply");
+    check(!service::JellyfinLink::parseDiscovery("not json").valid() &&
+              !service::JellyfinLink::parseDiscovery(R"({"Name":"x"})").valid(),
+          "anything else is not a server");
     rmdir(dir.c_str());
     std::cout << "jellyfin link tests passed\n";
     return 0;

@@ -11,6 +11,10 @@
 #include <random>
 #include <sstream>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/select.h>
+#include <sys/socket.h>
 
 namespace nativetv {
 namespace service {
@@ -251,6 +255,54 @@ Json JellyfinLink::status() const {
         result.set("state", Json::text("unlinked"));
     }
     return result;
+}
+
+Json JellyfinLink::parseDiscovery(const std::string &reply) {
+    const Json data = Json::parse(reply);
+    const std::string address = normalizeServer(data["Address"].string());
+    if (address.empty() || address.compare(0, 4, "http") != 0) return Json();
+    Json server = Json::object();
+    server.set("name", Json::text(data["Name"].string(address)));
+    server.set("address", Json::text(address));
+    server.set("id", Json::text(data["Id"].string()));
+    return server;
+}
+
+Json JellyfinLink::discover(int waitMs) {
+    Json servers = Json::array();
+    const int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) return servers;
+    const int yes = 1;
+    (void)setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &yes, sizeof yes);
+    sockaddr_in to = {};
+    to.sin_family = AF_INET;
+    to.sin_port = htons(7359);
+    to.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+    const char question[] = "Who is JellyfinServer?";
+    if (sendto(sock, question, sizeof question - 1, 0, reinterpret_cast<sockaddr *>(&to), sizeof to) < 0) {
+        close(sock);
+        return servers;
+    }
+    const auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(waitMs);
+    for (;;) {
+        const auto left = std::chrono::duration_cast<std::chrono::microseconds>(until - std::chrono::steady_clock::now());
+        if (left.count() <= 0) break;
+        fd_set ready;
+        FD_ZERO(&ready);
+        FD_SET(sock, &ready);
+        timeval wait = {static_cast<long>(left.count() / 1000000), static_cast<int>(left.count() % 1000000)};
+        if (select(sock + 1, &ready, nullptr, nullptr, &wait) <= 0) break;
+        char buffer[2048];
+        const ssize_t count = recv(sock, buffer, sizeof buffer, 0);
+        if (count <= 0) continue;
+        const Json server = parseDiscovery(std::string(buffer, static_cast<size_t>(count)));
+        bool seen = !server.valid();
+        for (const Json &known : servers.items())
+            seen = seen || known["address"].string() == server["address"].string();
+        if (!seen && servers.size() < 8) servers.add(server);
+    }
+    close(sock);
+    return servers;
 }
 
 } // namespace service

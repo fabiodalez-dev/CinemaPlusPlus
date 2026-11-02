@@ -48,6 +48,7 @@ enum class Operation {
     Settings, // /api/settings: the dashboard's MQTT and device settings (setup's broker entry)
     AdminUnlock, // /api/admin/unlock: the four-digit admin PIN, answered with a session
     Live, // /api/live: live TV inside Home, opened in the client's video window
-    Music // /api/music: ambient music while Home shows
+    Music, // /api/music: ambient music while Home shows
+    JellyfinLink // /api/jellyfin/link: Quick Connect from the TV's settings
 };
 }

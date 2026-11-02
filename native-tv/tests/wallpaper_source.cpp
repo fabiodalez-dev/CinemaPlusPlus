@@ -71,6 +71,11 @@ int main() {
     assert(rotation.size() == 2 && rotation[0].path == folder + "/a.jpg" && rotation[1].key == "usb-1");
     assert(wallpaperRotationFile(root, "usb-1", usb) == folder + "/b.png");
     assert(wallpaperRotationFile(root, "usb-9", usb).empty() && wallpaperRotationFile(root, "usb-x", usb).empty());
+    // A link out of the stick is not followed.
+    assert(std::system(("mkdir -p '" + usb + "/sdb/sdb1' '" + root + "/outside/backgrounds' && ln -s '" + root +
+                        "/outside' '" + usb + "/sdb/sdb1/lounge'").c_str()) == 0);
+    write(root + "/outside/backgrounds/secret.jpg", "jpg");
+    assert(wallpaperRotation(root, readWallpaperSource(root), usb).size() == 2);
     Json status = Json::object();
     addWallpaperSource(status, root, usb);
     assert(status["source"].string() == "usb" && status["rotation"].size() == 2 && status["interval"].number() == 5);

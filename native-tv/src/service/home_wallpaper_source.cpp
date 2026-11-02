@@ -1,5 +1,7 @@
 #include "service/home_wallpaper_source.hpp"
 #include <algorithm>
+#include <climits>
+#include <cstdlib>
 #include <cstdio>
 #include <curl/curl.h>
 #include <dirent.h>
@@ -76,12 +78,21 @@ std::vector<std::string> entries(const std::string &directory, bool directories)
     return names;
 }
 
+// True when `path`, links resolved, is still inside `root`: a stick's folders may be links.
+bool inside(const std::string &path, const std::string &root) {
+    char resolved[PATH_MAX], base[PATH_MAX];
+    if (!realpath(path.c_str(), resolved) || !realpath(root.c_str(), base)) return false;
+    const std::string where = resolved, under = std::string(base) + "/";
+    return where.compare(0, under.size(), under) == 0;
+}
+
 // The USB sticks' lounge/backgrounds pictures, as Cinema finds them: /tmp/usb/<device>/<drive>.
 std::vector<std::string> usbPictures(const std::string &usbRoot) {
     std::vector<std::string> files;
     for (const std::string &device : entries(usbRoot, true))
         for (const std::string &drive : entries(usbRoot + "/" + device, true)) {
             const std::string folder = usbRoot + "/" + device + "/" + drive + "/lounge/backgrounds";
+            if (!inside(folder, usbRoot)) continue;
             for (const std::string &name : entries(folder, false))
                 if (picture(name) && files.size() < kUsbMaximum && regularFile(folder + "/" + name))
                     files.push_back(folder + "/" + name);

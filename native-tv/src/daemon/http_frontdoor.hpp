@@ -393,6 +393,7 @@ class HttpFrontDoor {
     void handleCinemaFirstApp(HttpExchange &exchange) const;
     void handleWallpaperSource(HttpExchange &exchange) const;
     void applyUsbConfig() const;
+    Json jellyfinServers() const;
     std::string jellyfinClient() const;
     void addJellyfinClients(Json &response) const;
     void sendCinemaDiagnostics(HttpExchange &exchange) const;
@@ -439,6 +440,10 @@ class HttpFrontDoor {
     mutable std::shared_ptr<std::atomic<bool>> homeEscapeReturnPending_;
     mutable std::mutex homeRecentAppsMutex_;
     mutable std::mutex homeConfigMutex_;
+    mutable std::mutex jellyfinServersMutex_;
+    mutable Json jellyfinServers_;
+    mutable bool jellyfinDiscovering_ = false;
+    mutable std::chrono::steady_clock::time_point jellyfinServersAt_;
     mutable std::mutex homeAutoLaunchMutex_;
     mutable std::mutex homeOperationMutex_;
     mutable service::HomeRecentApps homeRecentAppsCache_;

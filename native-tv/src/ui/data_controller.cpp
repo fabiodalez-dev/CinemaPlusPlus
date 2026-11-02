@@ -64,7 +64,8 @@ void Application::refresh() {
                 services_.read("guide", Operation::HomeGuide);
         }
     }
-    refreshAt_ = now_ + (state_.screen == Screen::Catalog ||
+    // Jellyfin's Quick Connect: the approval of the code shows within two seconds.
+    refreshAt_ = now_ + (state_.screen == Screen::Catalog || state_.menu.sub == "jellyfin" ||
                                  (state_.screen == Screen::Setup && state_.menu.level == "handoff")
                              ? 2000
                              : 10000);
@@ -146,8 +147,10 @@ void Application::response(const Response &response) {
             services_.read("install", Operation::InstallStatus);
             rebuildMenu();
         } else if (pending_.operation != Operation::OpenHomeItem &&
-                   pending_.operation != Operation::Recents)
-            toast("Saved");
+                   pending_.operation != Operation::Recents &&
+                   // The Yellow key says itself which view it turned on.
+                   !(pending_.operation == Operation::SetHomeLayout && pending_.body.has("essential")))
+            toast(say::msg("tv.settings.saved", "Saved"));
         if (pending_.operation == Operation::Recents && state_.screen == Screen::Quick &&
             state_.menu.level == "recents") {
             if (pending_.body["action"].string() == "open" ||

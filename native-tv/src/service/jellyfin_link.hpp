@@ -36,6 +36,12 @@ class JellyfinLink {
     // {"state": "unlinked"|"waiting"|"linked", "code", "server", "user", "expiresInS"}.
     Json status() const;
 
+    // The Jellyfin servers on the home network, by Jellyfin's own discovery (a UDP broadcast of
+    // "Who is JellyfinServer?" to port 7359): [{"name", "address"}], within waitMs.
+    static Json discover(int waitMs = 1500);
+    // A discovery reply as Jellyfin sends it ({"Address", "Id", "Name"}); invalid when it is not one.
+    static Json parseDiscovery(const std::string &reply);
+
     // Exposed for the tests: "jf.local:8096/" becomes "http://jf.local:8096".
     static std::string normalizeServer(const std::string &server);
 

@@ -1,5 +1,7 @@
 #include "service/usb_config.hpp"
 #include <algorithm>
+#include <climits>
+#include <cstdlib>
 #include <dirent.h>
 #include <fstream>
 #include <sstream>
@@ -52,6 +54,11 @@ Json findUsbConfig(const std::string &usbRoot, std::string &fingerprint) {
     for (const std::string &device : folders(usbRoot))
         for (const std::string &drive : folders(usbRoot + "/" + device)) {
             const std::string path = usbRoot + "/" + device + "/" + drive + "/lounge/config.json";
+            // The stick's folders may be links: the file must still be on the stick.
+            char resolved[PATH_MAX], base[PATH_MAX];
+            if (!realpath(path.c_str(), resolved) || !realpath(usbRoot.c_str(), base) ||
+                std::string(resolved).compare(0, std::string(base).size() + 1, std::string(base) + "/") != 0)
+                continue;
             struct stat info = {};
             if (lstat(path.c_str(), &info) != 0 || !S_ISREG(info.st_mode) ||
                 static_cast<unsigned long long>(info.st_size) > kConfigBytes)

@@ -154,6 +154,8 @@ std::string legacyRoute(Operation operation, const Json &arguments) {
         return "/api/music";
     case Operation::Live:
         return "/api/live";
+    case Operation::JellyfinLink:
+        return "/api/jellyfin/link";
     case Operation::AdminUnlock:
         return "/api/admin/unlock";
     case Operation::None:

@@ -11147,6 +11147,25 @@ void HttpFrontDoor::handleWallpaperSource(HttpExchange &exchange) const {
     respond(200, result);
 }
 
+// The Jellyfin servers Jellyfin's discovery finds; the search runs in the background, at most once
+// a minute, and this returns what the last one found.
+Json HttpFrontDoor::jellyfinServers() const {
+    std::lock_guard<std::mutex> lock(jellyfinServersMutex_);
+    const auto now = std::chrono::steady_clock::now();
+    if (!jellyfinDiscovering_ &&
+        (!jellyfinServersAt_.time_since_epoch().count() || now - jellyfinServersAt_ > std::chrono::seconds(60))) {
+        jellyfinDiscovering_ = true;
+        jellyfinServersAt_ = now;
+        std::thread([this]() {
+            const Json found = service::JellyfinLink::discover(1500);
+            std::lock_guard<std::mutex> done(jellyfinServersMutex_);
+            jellyfinServers_ = found;
+            jellyfinDiscovering_ = false;
+        }).detach();
+    }
+    return jellyfinServers_.isArray() ? jellyfinServers_ : Json::array();
+}
+
 // Cinema++ as the first app at power-on (lifecycle/cinemapp-first-app): GET says whether it is
 // on, POST {"enabled"} turns it on, taking over from Cinema web, or off, giving Cinema web back.
 void HttpFrontDoor::handleCinemaFirstApp(HttpExchange &exchange) const {
@@ -16650,6 +16669,16 @@ void HttpFrontDoor::sendHomeStatus(HttpExchange &exchange) const {
             bool tunerAvailable = false;
             response.set("channels", homeChannelSnapshot(tunerAvailable));
         }
+        // Cinema++: Jellyfin's Quick Connect from the TV's settings, with the servers found on
+        // the home network (looked for again at most once a minute).
+        std::string linkError;
+        if (jellyfinLink_.poll(linkError))
+            homeJellyfin_.refreshNow();
+        Json link = jellyfinLink_.status();
+        if (!linkError.empty())
+            link.set("error", Json::text(linkError));
+        response.set("jellyfinLink", link);
+        response.set("jellyfinServers", jellyfinServers());
     }
     (void)exchange.respond(200,
                            {{"Content-Type", "application/json; charset=utf-8"},
