@@ -34,7 +34,8 @@ bool homeOpenHandledKind(const std::string &kind, const std::string &id);
 HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
                           const Json &apps, const Json &devices,
                           const Json &channels, const std::string &action = "",
-                          const std::string &preferredClient = "");
+                          const std::string &preferredClient = "",
+                          const Json &customApps = Json());
 
 // The Jellyfin apps Cinema opens titles in, LiteFin (which opens the title itself) first.
 const std::vector<std::string> &homeJellyfinClients();

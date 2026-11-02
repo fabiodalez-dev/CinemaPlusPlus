@@ -352,6 +352,19 @@ std::vector<CardRow> homeRows(const std::string &tab, const Json &catalogue, con
     // The apps lead, as on Google TV, in their kinds' order when sorted by kind; the top picks
     // follow and the hero is drawn from them.
     CardRow apps = appsRow(catalogue, guide, false);
+    // Cinema's custom tiles: an app opened with the parameters saved for it.
+    for (const auto &entry : catalogue["layout"]["customApps"].items()) {
+        Card custom;
+        custom.id = "custom:" + entry["id"].string();
+        custom.kind = "app";
+        custom.title = entry["title"].string();
+        custom.image = "app:" + entry["appId"].string();
+        custom.data = Json::object();
+        custom.data.set("icon", Json::text("star"));
+        custom.command = post(Operation::OpenHomeItem,
+                              fields({{"kind", Json::text("custom")}, {"id", entry["id"]}}));
+        apps.cards.push_back(custom);
+    }
     // Cinema's dock ends with All apps and the TV's own settings.
     if (!apps.cards.empty() && catalogue["layout"]["appShortcuts"].boolean()) {
         Card all;

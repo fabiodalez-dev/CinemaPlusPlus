@@ -259,6 +259,22 @@ int main() {
     assert(!refused.response["ok"].boolean());
     assert(refused.document.dump() == normalized.dump());
 
+    // Cinema++: the essential view, the ambience and the custom tiles, checked on the way in.
+    const HomeDocumentUpdate cinema = updateHomeLayout(normalized, Json::parse(R"({
+        "essential": true, "ambience": "night",
+        "customApps": [
+            {"id": "yt", "title": "Canale", "appId": "youtube.leanback.v4", "params": {"contentTarget": "x"}},
+            {"id": "yt", "title": "Twice", "appId": "youtube.leanback.v4"},
+            {"id": "BAD", "title": "Upper", "appId": "a"},
+            {"id": "x", "title": "Bad app", "appId": "a;rm"},
+            {"id": "noparams", "title": "Plain", "appId": "netflix", "params": [1]}]})"));
+    assert(cinema.response["ok"].boolean());
+    assert(cinema.document["essential"].boolean() && cinema.document["ambience"].string() == "night");
+    const Json tiles = cinema.document["customApps"];
+    assert(tiles.size() == 2 && tiles[0]["params"]["contentTarget"].string() == "x");
+    assert(tiles[1]["id"].string() == "noparams" && tiles[1]["params"].isObject() && tiles[1]["params"].keys().empty());
+    assert(updateHomeLayout(cinema.document, Json::parse(R"({"ambience":"party"})")).document["ambience"].string() == "night");
+
     std::cout << "Native Home profiles and layouts passed.\n";
     return 0;
 }

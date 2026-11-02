@@ -62,6 +62,51 @@ async function loadHome(afterSave) {
   renderHome();
   loadHomeKeys();
   loadWallSource();
+  customRender();
+}
+
+/* ---- Cinema's custom tiles: an app opened with launch parameters ---- */
+function customRender() {
+  const list = q('custom-list'), select = q('custom-app');
+  if (!list || !select) return;
+  const tiles = (homeLayout && homeLayout.customApps) || [];
+  list.textContent = '';
+  tiles.forEach(function (tile, i) {
+    const li = document.createElement('li');
+    li.textContent = tile.title + ' · ' + tile.appId + ' ';
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'btn btn-tonal';
+    remove.textContent = t('custom.remove', 'Remove');
+    remove.onclick = function () { homeSaveLayout({ customApps: tiles.filter(function (_, j) { return j !== i; }) }); };
+    li.appendChild(remove);
+    list.appendChild(li);
+  });
+  const apps = ((homeCat && homeCat.apps) || []).filter(a => a.id && a.id !== 'lg-home');
+  if (select.options.length !== apps.length) {
+    select.textContent = '';
+    apps.forEach(a => select.add(new Option(a.title || a.id, a.id)));
+  }
+}
+
+function customAdd() {
+  const title = q('custom-name').value.trim(), appId = q('custom-app').value;
+  let params = {};
+  const text = q('custom-params').value.trim();
+  q('custom-msg').textContent = '';
+  if (!title || !appId) { q('custom-msg').textContent = t('custom.missing', 'A name and an app are needed.'); return; }
+  if (text) {
+    try { params = JSON.parse(text); } catch (e) { params = null; }
+    if (!params || typeof params !== 'object' || Array.isArray(params)) {
+      q('custom-msg').textContent = t('custom.badParams', 'The parameters must be a JSON object.');
+      return;
+    }
+  }
+  const tiles = ((homeLayout && homeLayout.customApps) || []).slice();
+  tiles.push({ id: 'c' + Date.now().toString(36), title: title, appId: appId, params: params });
+  q('custom-name').value = '';
+  q('custom-params').value = '';
+  homeSaveLayout({ customApps: tiles });
 }
 
 /* ---- Where the wallpaper comes from (Cinema's backgrounds) ---- */

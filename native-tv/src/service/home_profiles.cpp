@@ -14,7 +14,7 @@ const char *kColors[] = {"#a8c7fa", "#f2b8b5", "#6dd58c", "#ffb74d",
                          "#7fcfff", "#d0bcff"};
 const char *kLayoutKeys[] = {"rows", "order", "sort", "hidden", "kinds", "channels",
                              "picture", "appNames", "clockFormat", "showInputs",
-                             "showLgHome", "showLive", "colours", "dockInputs", "showDate", "appShortcuts", "essential", "ambience"};
+                             "showLgHome", "showLive", "colours", "dockInputs", "showDate", "appShortcuts", "essential", "ambience", "customApps"};
 const char *kPromoApps[] = {"com.webos.app.lgchannels",
                             "com.webos.app.sportsteamsettings",
                             "com.webos.app.lifeonscreen", "amazon.alexa.view",
@@ -180,6 +180,7 @@ Json defaultDocument() {
     document.set("ambience", Json::text("default"));
     document.set("openOnPowerOn", Json::flag(false));
     document.set("colours", Json::parse("null"));
+    document.set("customApps", Json::array());
     document.set("profiles", Json::array());
     document.set("profile", Json::text(kMainProfile));
     document.set("hideLgHomeAtStart", Json::parse("null"));
@@ -231,6 +232,34 @@ Json validColours(const Json &value) {
     Json result = Json::object();
     result.set("text", Json::text(text));
     result.set("accent", Json::text(accent));
+    return result;
+}
+
+// Cinema's custom tiles: an app opened with launch parameters (a channel, a page, a stream).
+Json validCustomApps(const Json &value) {
+    Json result = Json::array();
+    if (!value.isArray()) return result;
+    for (const Json &entry : value.items()) {
+        if (result.size() >= 24 || !entry.isObject()) break;
+        const std::string id = entry["id"].string();
+        const std::string appId = entry["appId"].string();
+        std::string title = entry["title"].string();
+        while (!title.empty() && std::isspace(static_cast<unsigned char>(title.back()))) title.pop_back();
+        bool ok = !id.empty() && id.size() <= 24 && !title.empty() && title.size() <= 60 &&
+                  !appId.empty() && appId.size() <= 128;
+        for (char c : id) ok = ok && ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-');
+        for (char c : appId) ok = ok && (std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '_' || c == '-');
+        for (const Json &taken : result.items()) ok = ok && taken["id"].string() != id;
+        const Json params = entry["params"].isObject() && entry["params"].dump().size() <= 1024 ? entry["params"]
+                                                                                                 : Json::object();
+        if (!ok) continue;
+        Json app = Json::object();
+        app.set("id", Json::text(id));
+        app.set("title", Json::text(title));
+        app.set("appId", Json::text(appId));
+        app.set("params", params);
+        result.add(app);
+    }
     return result;
 }
 
@@ -365,6 +394,7 @@ Json normalizeHomeDocument(const Json &raw) {
     result.set("ambience", Json::text(ambience == "night" || ambience == "cinema" ? ambience : "default"));
     result.set("openOnPowerOn", Json::flag(raw["openOnPowerOn"].boolean()));
     result.set("colours", validColours(raw["colours"]));
+    result.set("customApps", validCustomApps(raw["customApps"]));
 
     Json profiles = Json::array();
     if (raw["profiles"].isArray()) {
@@ -483,6 +513,7 @@ HomeDocumentUpdate updateHomeLayout(const Json &input, const Json &body) {
         body["clockFormat"].string() == "24h" ? body["clockFormat"].string()
                                                : current["clockFormat"].string()));
     proposed.set("colours", body.has("colours") ? body["colours"] : current["colours"]);
+    proposed.set("customApps", body.has("customApps") ? body["customApps"] : current["customApps"]);
     Json next = normalizeHomeDocument(proposed);
     if (body["reset"].boolean()) {
         const Json defaults = defaultDocument();

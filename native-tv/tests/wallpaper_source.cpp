@@ -100,7 +100,9 @@ int main() {
            changes.music["source"].string() == "usb");
     assert(changes.weather["place"]["name"].string() == "Milano" && changes.weather["units"].string() == "c");
     const UsbConfigChanges none = usbConfigChanges(Json::parse(R"({"profile":"party","music":{"volume":3}})"));
-    assert(!none.layout.size() && !none.music.size() && !none.wallpaper.size() && !none.weather.size());
+    assert(none.layout.keys().empty() && none.music.keys().empty() && none.wallpaper.keys().empty() &&
+           none.weather.keys().empty());
+    assert(changes.layout.keys().size() == 4 && changes.music.keys().size() == 4);
 
     (void)std::system(("rm -rf '" + root + "'").c_str());
     std::cout << "wallpaper source tests passed\n";

@@ -1879,6 +1879,16 @@
             promotions hidden again. Channels stay as they are.
           </div>
 </article>
+<article class="card" style="--p:2;--t:4;--d:6" id="custom-apps-card">
+<div class="card-h"><h2 data-t="custom.title">Custom tiles</h2></div>
+<div class="sub" data-t="custom.desc">As on Cinema: a tile on Home that opens an app with launch parameters, a YouTube channel or a page of an app. They follow your apps on Home.</div>
+<ul class="sub" id="custom-list"></ul>
+<div class="setting-row"><label for="custom-name" data-t="custom.name">Name</label><input id="custom-name" maxlength="60"></div>
+<div class="setting-row"><label for="custom-app" data-t="custom.app">App</label><select id="custom-app" class="pill-sel"></select></div>
+<div class="setting-row"><label for="custom-params" data-t="custom.params">Launch parameters (JSON, optional)</label><input id="custom-params" maxlength="1024" placeholder='{"contentTarget":"https://www.youtube.com/tv#/channel?c=..."}'></div>
+<div class="setting-row"><button type="button" class="btn btn-tonal" onclick="customAdd()" data-t="custom.add">Add the tile</button></div>
+<div class="sub" id="custom-msg" role="status"></div>
+</article>
 <article class="card" style="--p:2;--t:4;--d:6">
 <div class="card-h"><span class="badge"><svg class="ic" aria-hidden="true"><use href="#i-wallpaper"/></svg></span><h2 data-t="home.wall.title">Wallpaper</h2></div>
 <div class="setting-row">

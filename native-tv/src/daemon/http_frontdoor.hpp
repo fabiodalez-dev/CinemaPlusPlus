@@ -394,6 +394,7 @@ class HttpFrontDoor {
     void handleWallpaperSource(HttpExchange &exchange) const;
     void applyUsbConfig() const;
     Json jellyfinServers() const;
+    Json currentHomeLayout() const;
     std::string jellyfinClient() const;
     void addJellyfinClients(Json &response) const;
     void sendCinemaDiagnostics(HttpExchange &exchange) const;

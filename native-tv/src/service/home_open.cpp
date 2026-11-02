@@ -61,7 +61,7 @@ const std::vector<std::string> &homeJellyfinClients() {
 HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
                           const Json &apps, const Json &devices,
                           const Json &channels, const std::string &action,
-                          const std::string &preferredClient) {
+                          const std::string &preferredClient, const Json &customApps) {
     HomeOpenPlan plan;
     plan.handled = homeOpenHandledKind(kind, id);
     if (!plan.handled) return plan;
@@ -122,6 +122,20 @@ HomeOpenPlan planHomeOpen(const std::string &kind, const std::string &id,
             return plan;
         }
         plan.error = say::msg("srv.home.noJellyfin", "No Jellyfin app is installed on this TV");
+        return plan;
+    }
+    if (kind == "custom") {
+        // A tile of Cinema's custom apps: its app, installed, with the parameters saved for it.
+        for (const Json &entry : customApps.items()) {
+            if (entry["id"].string() != id) continue;
+            if (!findListed(apps, entry["appId"].string()).valid()) {
+                plan.error = say::msg("srv.home.customMissing", "That app is not installed on this TV");
+                return plan;
+            }
+            setLaunch(plan, entry["appId"].string());
+            if (entry["params"].isObject() && entry["params"].dump() != "{}") plan.launchParams = entry["params"];
+            return plan;
+        }
         return plan;
     }
     if (kind == "discover") {

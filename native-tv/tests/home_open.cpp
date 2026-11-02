@@ -73,6 +73,16 @@ int main() {
     plan = planHomeOpen("discover", "seerr", apps, devices, channels);
     assert(plan.ok && plan.appId == "org.litefin.app" && plan.launchParams["cinemaPage"].string() == "discover");
 
+    // A custom tile: its app, installed, with its parameters.
+    const Json custom = Json::parse(R"([{"id":"yt","title":"Canale","appId":"youtube.leanback.v4","params":{"contentTarget":"c"}},
+                                        {"id":"gone","title":"Gone","appId":"com.example.gone","params":{}}])");
+    plan = planHomeOpen("custom", "yt", apps, devices, channels, "", "", custom);
+    assert(plan.ok && plan.appId == "youtube.leanback.v4" && plan.launchParams["contentTarget"].string() == "c");
+    plan = planHomeOpen("custom", "gone", apps, devices, channels, "", "", custom);
+    assert(!plan.ok);
+    plan = planHomeOpen("custom", "nothing", apps, devices, channels, "", "", custom);
+    assert(!plan.ok);
+
     // Only what the catalogue lists can be opened.
     plan = planHomeOpen("app", "com.example.unknown", apps, devices, channels);
     assert(plan.handled && !plan.ok);

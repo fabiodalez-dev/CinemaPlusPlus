@@ -11166,6 +11166,14 @@ Json HttpFrontDoor::jellyfinServers() const {
     return jellyfinServers_.isArray() ? jellyfinServers_ : Json::array();
 }
 
+// Home's layout as saved, normalized: for the custom tiles when one is opened.
+Json HttpFrontDoor::currentHomeLayout() const {
+    std::lock_guard<std::mutex> lock(homeConfigMutex_);
+    JsonFile file(dataFilePath(dataRoot_, "home.json"), 8 * 1024 * 1024);
+    const JsonFileResult stored = file.load();
+    return service::normalizeHomeDocument(stored.found ? stored.value : Json::object());
+}
+
 // Cinema++ as the first app at power-on (lifecycle/cinemapp-first-app): GET says whether it is
 // on, POST {"enabled"} turns it on, taking over from Cinema web, or off, giving Cinema web back.
 void HttpFrontDoor::handleCinemaFirstApp(HttpExchange &exchange) const {
@@ -16711,7 +16719,7 @@ void HttpFrontDoor::applyUsbConfig() const {
         return;
     const service::UsbConfigChanges changes = service::usbConfigChanges(config);
     std::string error;
-    if (changes.layout.size()) {
+    if (!changes.layout.keys().empty()) {
         std::lock_guard<std::mutex> homeLock(homeConfigMutex_);
         JsonFile file(dataFilePath(dataRoot_, "home.json"), 8 * 1024 * 1024);
         const JsonFileResult stored = file.load();
@@ -16720,14 +16728,14 @@ void HttpFrontDoor::applyUsbConfig() const {
         if (update.response["ok"].boolean())
             (void)file.save(update.document, &error);
     }
-    if (changes.wallpaper.size() && service::saveWallpaperSource(dataRoot_, changes.wallpaper, error) &&
+    if (!changes.wallpaper.keys().empty() && service::saveWallpaperSource(dataRoot_, changes.wallpaper, error) &&
         service::readWallpaperSource(dataRoot_)["source"].string() == "photos") {
         const std::string root = dataRoot_;
         std::thread([root]() { (void)service::fetchCinemaPhotos(root); }).detach();
     }
-    if (changes.music.size())
+    if (!changes.music.keys().empty())
         (void)ambientMusic_.configure(changes.music, error);
-    if (changes.weather.size())
+    if (!changes.weather.keys().empty())
         (void)homeWeather_.configure(changes.weather, error);
     std::ofstream out(appliedPath.c_str(), std::ios::trunc);
     out << fingerprint << "\n";
@@ -18282,7 +18290,11 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     Json apps;
     Json devices;
     Json channels;
-    if (kind == "app" || kind == "youtube" || kind == "netflix" || kind == "jellyfin" || kind == "discover") {
+    Json customApps;
+    if (kind == "custom")
+        customApps = currentHomeLayout()["customApps"];
+    if (kind == "app" || kind == "youtube" || kind == "netflix" || kind == "jellyfin" || kind == "discover" ||
+        kind == "custom") {
         apps = homeCatalogueAppsSnapshot();
     } else if (kind == "dev") {
         devices = homeCatalogueDevicesSnapshot();
@@ -18294,7 +18306,7 @@ void HttpFrontDoor::handleHomeOpenPost(HttpExchange &exchange) const {
     const service::HomeOpenPlan plan =
         service::planHomeOpen(kind, id, apps, devices, channels,
                               payload["action"].isString() ? payload["action"].string() : "",
-                              jellyfinClient());
+                              jellyfinClient(), customApps);
     if (!plan.handled) {
         (void)proxy_.forwardBufferedBody(exchange, body);
         return;
