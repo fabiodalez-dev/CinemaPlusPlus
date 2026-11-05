@@ -902,6 +902,15 @@ bool HomeScreenManager::supportsTakeover(bool allowExperimentalHome) const {
     return current.supportsTakeover(allowExperimentalHome);
 }
 
+bool HomeScreenManager::isWebos22Family() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const HomeScreenState current(children_, systemRoot_, dataRoot_, procRoot_,
+                                  allowExperimental_);
+    return current.isWebos22Family();
+}
+
+const std::string &HomeScreenManager::dataRoot() const { return dataRoot_; }
+
 Json HomeScreenManager::state() const {
     std::lock_guard<std::mutex> lock(mutex_);
     const HomeScreenState current(children_, systemRoot_, dataRoot_, procRoot_,
