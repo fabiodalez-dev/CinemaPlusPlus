@@ -56,10 +56,29 @@ body{display:flex;display:-webkit-flex;align-items:center;-webkit-align-items:ce
     spinner.className = stuck ? 'spinner off' : 'spinner';
   }
 
+  // Reads the launch params webOS puts on PalmSystem as JSON. screen=home
+  // means the Home key or the boot activity opened us, and we should land
+  // on the Home launcher page (pages/home.html, the big tiles the viewer
+  // sees), not on a dashboard tab: a dashboard "home" tab exists too, but
+  // it is the settings page for the Home takeover, not the launcher itself.
+  function launchScreen() {
+    try {
+      var raw = window.PalmSystem && PalmSystem.launchParams;
+      var p = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+      if (p && typeof p.screen === 'string' && /^[a-z]+$/.test(p.screen))
+        return p.screen;
+    } catch (_) { }
+    return '';
+  }
+
   function open() {
     if (done) return;
     done = true;
-    location.replace(BASE + '/assets/google-tv/pages/dashboard.html?tab=system&t=' + Date.now());
+    var screen = launchScreen();
+    var target = screen === 'home'
+      ? '/assets/home-app/index.html'
+      : '/assets/google-tv/pages/dashboard.html?tab=' + (screen || 'system');
+    location.replace(BASE + target + (target.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now());
   }
 
   // Asks the server what it is. cb(caps) with null when nothing answers.
@@ -138,13 +157,16 @@ body{display:flex;display:-webkit-flex;align-items:center;-webkit-align-items:ce
   function start() {
     done = false;
     say('Starting…');
-    // A running server of this version or newer opens straight away. Anything
-    // else - an older one, or nothing answering after a few seconds - goes to the
-    // setup step, which only starts the server when it is already up to date.
-    // Setup also runs once for a server of the right version that deploy.sh put
-    // there, so this app can take over from the tile deploy.sh added.
+    // A running server strictly newer than this app opens straight away.
+    // Anything else - older, same version, or nothing answering after a few
+    // seconds - goes to the setup step. Same-version is included so install.sh
+    // always runs sync_native, which copies the binaries in the payload over
+    // /var/lib/tvweb/native when they differ byte-by-byte: without this a
+    // re-install that keeps the version number would never refresh the
+    // compiled daemon, and bug fixes shipped behind the same version would
+    // sit in the IPK without ever reaching the TV.
     waitFor(4, function (caps) {
-      if (caps && caps.fromHomebrewChannel && !older(caps.version, APP_VERSION)) return open();
+      if (caps && caps.fromHomebrewChannel && older(APP_VERSION, caps.version)) return open();
       install();
     });
   }
