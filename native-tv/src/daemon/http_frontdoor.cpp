@@ -3580,10 +3580,16 @@ HomeProbeGate *HttpFrontDoor::homeProbeGate() const {
 }
 
 Json HttpFrontDoor::homeSupported(bool probe) const {
+    const std::string webos = homeStatusWebosVersion(systemRoot_);
     const Json supported = service::homeStatusSupported(
-        homeStatusWebosVersion(systemRoot_),
-        config_.document["allowExperimentalHome"].boolean());
+        webos, config_.document["allowExperimentalHome"].boolean());
     if (!supported["ok"].boolean()) return supported;
+    // On the W22 family (webOS 7.x / 8.x) the takeover is hook-based and
+    // never launches the native client, so the native-client probe does not
+    // gate it. Running it here would answer "missing" on a plain install and
+    // keep Home off for a reason that does not apply to this backend.
+    if (webos.compare(0, 2, "7.") == 0 || webos.compare(0, 2, "8.") == 0)
+        return supported;
     return homeSupportedWithProbe(supported, homeProbeGate()->verdict(probe));
 }
 

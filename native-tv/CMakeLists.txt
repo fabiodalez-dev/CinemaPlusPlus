@@ -65,6 +65,7 @@ add_library(nativetv_daemon src/daemon/app_tile_manager.cpp
   src/daemon/home_takeover_manager.cpp
   src/daemon/home_takeover_lifecycle.cpp
   src/daemon/home_takeover_stager.cpp
+  src/daemon/home_takeover_hooks.cpp
   src/daemon/ha_discovery.cpp src/daemon/ha_discovery_templates.cpp
   src/daemon/ha_entity_catalogue.cpp
   src/daemon/sam_rescan_manager.cpp

@@ -186,9 +186,23 @@ class HomeScreenState {
         return startsWith(version, "9.");
     }
 
+    // The LG 43UQ81003LB and other W22-family TVs report webOS 7.6.0. Their Home
+    // is a native binary that loads QML modules at /usr/palm/applications/
+    // com.webos.app.home/qml/UserInterfaceLayer/Containers/MainView.qml, with no
+    // writable layout XML (as on webOS 9) and no overlayable Flutter assets (as
+    // on webOS 10). The takeover on these TVs is hook-based, implemented by the
+    // deploy hooks (keybind on 773 and the HBC boot activity): the file-level
+    // manager keeps clear of the LG layout and reports no mount, so restore is
+    // always a no-op and nothing written here can hold the TV back.
+    bool isWebos22Family() const {
+        return startsWith(version, "7.") || startsWith(version, "8.") ||
+               (startsWith(version, "11.") && allowExperimental);
+    }
+
     bool supportsTakeover(bool allowExperimentalHome) const {
         return startsWith(version, "9.") || startsWith(version, "10.") ||
-               (startsWith(version, "11.") && allowExperimentalHome);
+               (startsWith(version, "11.") && allowExperimentalHome) ||
+               (isWebos22Family() && allowExperimentalHome);
     }
 
     Json state() const {
@@ -887,6 +901,15 @@ bool HomeScreenManager::supportsTakeover(bool allowExperimentalHome) const {
                                   allowExperimental_);
     return current.supportsTakeover(allowExperimentalHome);
 }
+
+bool HomeScreenManager::isWebos22Family() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const HomeScreenState current(children_, systemRoot_, dataRoot_, procRoot_,
+                                  allowExperimental_);
+    return current.isWebos22Family();
+}
+
+const std::string &HomeScreenManager::dataRoot() const { return dataRoot_; }
 
 Json HomeScreenManager::state() const {
     std::lock_guard<std::mutex> lock(mutex_);
