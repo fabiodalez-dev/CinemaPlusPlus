@@ -10,7 +10,12 @@
 namespace nativetv {
 namespace daemon {
 namespace {
-const char *const kAppId = "io.github.ihtisham1211.nativetv";
+// The Home key opens com.tvweb.home, the webOS wrapper app that Cinema++
+// registers as its Home replacement. Opening it in turn opens the native
+// client com.tvweb.dashboard, which draws the real launcher UI (SDL2 + GL).
+// The HBC-installed id (io.github.ihtisham1211.nativetv) is the dashboard web
+// page, not a launcher, so pointing the Home key at it opens Settings.
+const char *const kAppId = "com.tvweb.home";
 const char *const kBootHookName = "55-cinemapp-home";
 const char *const kBackupName = "home-webos22-keybinds.json.bak";
 // The HBC init.d script that opens Cinema++ after SAM has settled. Keeps the
@@ -21,7 +26,7 @@ const char *const kBootHookScript =
     "#!/bin/sh\n"
     "# Native Tv Home (W22 family): bring Cinema++ to the front once SAM has\n"
     "# published com.webos.applicationManager. Added by takeoverViaHooks.\n"
-    "APP=io.github.ihtisham1211.nativetv\n"
+    "APP=com.tvweb.home\n"
     "(\n"
     "  n=0\n"
     "  while [ $n -lt 60 ]; do\n"
@@ -33,7 +38,7 @@ const char *const kBootHookScript =
     "  done\n"
     "  (sleep 3) | /usr/bin/luna-send -i -n 1 "
     "luna://com.webos.applicationManager/launch "
-    "\"{\\\"id\\\":\\\"$APP\\\",\\\"params\\\":{\\\"screen\\\":\\\"home\\\"}}\" "
+    "\"{\\\"id\\\":\\\"$APP\\\"}\" "
     ">/dev/null 2>&1\n"
     ") </dev/null >/dev/null 2>&1 &\n"
     "exit 0\n";
@@ -105,7 +110,7 @@ bool fileExists(const std::string &path) {
     return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode);
 }
 
-const char *const kTakeoverMark = "io.github.ihtisham1211.nativetv";
+const char *const kTakeoverMark = "com.tvweb.home";
 
 bool keybindClaimsHome(const std::string &contents) {
     // The exact string match is intentional: any keybind that routes 773 to
@@ -115,9 +120,9 @@ bool keybindClaimsHome(const std::string &contents) {
 }
 
 std::string renderKeybinds() {
-    // One line keeps diffs minimal when a user later edits by hand.
-    return std::string("{\"773\":{\"action\":\"launch\",\"id\":\"") + kAppId +
-           "\",\"params\":{\"screen\":\"home\"}}}\n";
+    // One line keeps diffs minimal when a user later edits by hand. com.tvweb.home
+    // takes no params; it is the LG-registered Home wrapper.
+    return std::string("{\"773\":{\"action\":\"launch\",\"id\":\"") + kAppId + "\"}}\n";
 }
 
 Json failure(const std::string &message) {
