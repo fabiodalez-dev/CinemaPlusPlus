@@ -35,6 +35,7 @@
 #include "daemon/logger.hpp"
 #include "daemon/mqtt_setup.hpp"
 #include "daemon/screen_time_enforcer.hpp"
+#include "daemon/volume_ceiling_enforcer.hpp"
 #include "daemon/state_subscriptions.hpp"
 #include "domain/names.hpp"
 #include "domain/say.hpp"
@@ -66,7 +67,9 @@
 #include "service/config_settings.hpp"
 #include "service/remote_input.hpp"
 #include "service/remote_keys.hpp"
+#include "service/keyboard.hpp"
 #include "service/screen_time.hpp"
+#include "service/volume_ceiling.hpp"
 #include "service/oled_care.hpp"
 #include "service/privacy_consent.hpp"
 #include "service/privacy_service.hpp"
@@ -402,12 +405,12 @@ void sendAdminJson(HttpExchange &exchange, int status, const Json &body,
 }
 
 // A small JSON body from any client, which an admin route takes (readSetupPayload is the TV's own).
-bool readAdminPayload(HttpExchange &exchange, Json &payload) {
+bool readAdminPayload(HttpExchange &exchange, Json &payload, size_t maximumBytes = 256) {
     if (!setupJsonContentType(exchange.request())) {
         sendSetupError(exchange, 415, "Content-Type must be application/json");
         return false;
     }
-    if (!exchange.setBodyLimit(256)) {
+    if (!exchange.setBodyLimit(maximumBytes)) {
         sendSetupError(exchange, 413, "request body too large", true);
         return false;
     }
@@ -1761,7 +1764,8 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
                              service::AppCatalogFetcher appCatalogFetcher,
                              service::AppPackageDownload appPackageFetcher,
                              HomeTakeoverLifecycleManager *homeTakeoverLifecycleManager,
-                             EventLoop *eventLoop)
+                             EventLoop *eventLoop,
+                             VolumeCeilingEnforcer *volumeCeilingEnforcer)
     : config_(std::move(config)), screenTimeSettings_(config_.document["screenTime"]),
       version_(std::move(version)), appCatalogRepos_(config_.document["apps"]["repos"]),
       appCatalog_(version_, std::move(appCatalogFetcher)),
@@ -1797,6 +1801,7 @@ HttpFrontDoor::HttpFrontDoor(ServerConfig config, std::string version, std::stri
       samRescanManager_(samRescanManager),
       appTileManager_(appTileManager),
       eventLoop_(eventLoop),
+      volumeCeilingEnforcer_(volumeCeilingEnforcer),
       assetsRoot_(assetsRoot), staticAssets_(std::move(assetsRoot), version_),
       procRoot_(std::move(procRoot)),
       systemRoot_(std::move(systemRoot)), cpuWindowMs_(cpuWindowMs) {
@@ -10677,6 +10682,8 @@ void HttpFrontDoor::setRemoteKey(HttpExchange &exchange) const {
     }
 
     service::RemoteKeysReadState state;
+    state.allowControl = config_.allowControl;
+    state.allowPower = config_.allowPower;
     state.systemRoot = systemRoot_;
     state.dataRoot = dataRoot_;
     state.filterChain = replies[0].response["configs"][
@@ -12163,6 +12170,7 @@ bool HttpFrontDoor::createBackup(Json &backup, const Json *settingsContext) cons
         fill("screenTime", "{\"action\":\"off\",\"appAction\":\"home\",\"apps\":{},"
                            "\"bedtimeEnd\":\"\",\"bedtimeStart\":\"\",\"dailyMinutes\":0,"
                            "\"enabled\":false,\"idleMinutes\":0}");
+        fill("volumeCeiling", service::volumeCeilingSettings(Json::object()).dump().c_str());
         fill("syslog", "{\"port\":514,\"redact\":true,\"server\":\"\","
                        "\"sources\":[\"system\",\"nativetv\"]}");
     }
@@ -18456,6 +18464,8 @@ void HttpFrontDoor::sendApps(HttpExchange &exchange) const {
         replies[remoteKeysCall].error.empty() &&
         replies[remoteKeysCall].response.isObject()) {
         service::RemoteKeysReadState remoteKeysState;
+        remoteKeysState.allowControl = config_.allowControl;
+        remoteKeysState.allowPower = config_.allowPower;
         remoteKeysState.systemRoot = systemRoot_;
         remoteKeysState.dataRoot = dataRoot_;
         remoteKeysState.filterChain = replies[remoteKeysCall].response["configs"]
@@ -19705,6 +19715,109 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
                                response.dump());
         return;
     }
+    if (request.uri == "/api/volumelimit") {
+        const auto respond = [&exchange](int status, const Json &body) {
+            (void)exchange.respond(status,
+                                   {{"Content-Type", "application/json"},
+                                    {"Cache-Control", "no-store"},
+                                    {"X-Content-Type-Options", "nosniff"}},
+                                   body.dump());
+        };
+        const auto fail = [&respond](int status, const std::string &message) {
+            Json failure = Json::object();
+            failure.set("ok", Json::flag(false));
+            failure.set("error", Json::text(message));
+            respond(status, failure);
+        };
+        const auto settingsResponse = [this, &respond](const Json &stored) {
+            Json document = Json::object();
+            document.set("volumeCeiling", stored);
+            Json response = Json::object();
+            response.set("ok", Json::flag(true));
+            response.set("writable", Json::flag(config_.allowControl));
+            response.set("settings", service::volumeCeilingSettings(document));
+            respond(200, response);
+        };
+        if (request.method != "POST") {
+            settingsResponse(currentConfigDocument()["volumeCeiling"]);
+            return;
+        }
+        if (!config_.allowControl) {
+            sendSetupError(exchange, 403, say::msg("srv.controlsOff", "controls disabled in config"));
+            return;
+        }
+        if (rejectCrossSitePost(exchange))
+            return;
+        Json patch;
+        if (!readAdminPayload(exchange, patch))
+            return;
+        Json validated;
+        std::string error;
+        if (!service::validateVolumeCeilingPatch(patch, validated, error)) {
+            fail(400, error);
+            return;
+        }
+        Json saved;
+        if (!ConfigStore(configPath_).patchObjectSection("volumeCeiling", validated, &saved,
+                                                         &error)) {
+            fail(500, "could not save setting: " + error);
+            return;
+        }
+        if (volumeCeilingEnforcer_) {
+            Json document = Json::object();
+            document.set("volumeCeiling", saved);
+            if (!volumeCeilingEnforcer_->apply(service::volumeCeilingSettings(document), &error)) {
+                fail(500, error.empty() ? "could not apply the volume ceiling" : error);
+                return;
+            }
+        }
+        settingsResponse(saved);
+        return;
+    }
+    if (request.uri == "/api/keyboard") {
+        if (request.method != "POST") {
+            sendSetupError(exchange, 405, "method not allowed");
+            return;
+        }
+        if (!config_.allowControl) {
+            sendSetupError(exchange, 403, say::msg("srv.controlsOff", "controls disabled in config"));
+            return;
+        }
+        if (rejectCrossSitePost(exchange))
+            return;
+        Json body;
+        if (!readAdminPayload(exchange, body, 4096))
+            return;
+        service::KeyboardCall call;
+        std::string error;
+        Json answer = Json::object();
+        if (!service::keyboardCall(body, call, error)) {
+            answer.set("ok", Json::flag(false));
+            answer.set("error", Json::text(error));
+            (void)exchange.respond(400, {{"Content-Type", "application/json"},
+                                         {"Cache-Control", "no-store"},
+                                         {"X-Content-Type-Options", "nosniff"}},
+                                   answer.dump());
+            return;
+        }
+        // The TV answers for itself, and says when no text field is open.
+        LunaReply reply;
+        const bool sent = waitForCommandPolicyLuna(
+            luna_, commandPolicy_, controlPolicyContext(config_), "keyboard." + call.action,
+            call.uri, call.payload, "ime-keyboard", false, reply);
+        const bool taken = sent && reply.response["returnValue"].boolean();
+        answer.set("ok", Json::flag(taken));
+        if (!taken) {
+            std::string why = reply.response["errorText"].string();
+            if (why.empty()) why = reply.error;
+            answer.set("error", Json::text(why.empty() ? "the TV did not take it" : why));
+        }
+        (void)exchange.respond(200, {{"Content-Type", "application/json"},
+                                     {"Cache-Control", "no-store"},
+                                     {"X-Content-Type-Options", "nosniff"}},
+                               answer.dump());
+        return;
+    }
     if (request.uri == "/api/ledstrip" && request.method == "GET") {
         (void)exchange.respond(200,
                                {{"Content-Type", "application/json"},
@@ -19873,6 +19986,32 @@ void HttpFrontDoor::dispatch(HttpExchange &exchange) const {
     }
     if (request.uri == "/api/remotekeys" && request.method == "POST") {
         setRemoteKey(exchange);
+        return;
+    }
+    if (request.uri == "/api/adblock/export") {
+        if (request.method != "GET" && request.method != "HEAD") {
+            sendSetupError(exchange, 405, "method not allowed");
+            return;
+        }
+        std::string format;
+        std::string tier;
+        (void)queryParameter(request.query, "format", format);
+        (void)queryParameter(request.query, "tier", tier);
+        service::AdBlockStore fallbackStore(dataRoot_, systemRoot_);
+        const service::AdBlockStore &store = adBlockManager_ ? adBlockManager_->store()
+                                                             : fallbackStore;
+        const std::string text = store.exportList(format, tier);
+        if (text.empty()) {
+            sendSetupError(exchange, 400, "format must be hosts, pihole or adguard");
+            return;
+        }
+        (void)exchange.respond(200,
+                               {{"Content-Type", "text/plain; charset=utf-8"},
+                                {"Content-Disposition",
+                                 "attachment; filename=\"nativetv-blocklist-" + format + ".txt\""},
+                                {"Cache-Control", "no-store"},
+                                {"X-Content-Type-Options", "nosniff"}},
+                               text);
         return;
     }
     if (request.uri == "/api/adblock/custom" && request.method == "POST") {

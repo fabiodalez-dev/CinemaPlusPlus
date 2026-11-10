@@ -52,6 +52,7 @@ class AdBlockManager;
 class GameFrameRate;
 class Logger;
 class ScreenTimeEnforcer;
+class VolumeCeilingEnforcer;
 class StateSubscriptions;
 class DevtoolsFirewall;
 class HomeScreenManager;
@@ -115,7 +116,8 @@ class HttpFrontDoor {
                   service::AppCatalogFetcher appCatalogFetcher = {},
                   service::AppPackageDownload appPackageFetcher = {},
                   HomeTakeoverLifecycleManager *homeTakeoverLifecycleManager = nullptr,
-                  EventLoop *eventLoop = nullptr);
+                  EventLoop *eventLoop = nullptr,
+                  VolumeCeilingEnforcer *volumeCeilingEnforcer = nullptr);
     ~HttpFrontDoor();
     void handle(HttpExchange &exchange) const;
     // A live state event: the next stats read is made afresh, and the cached
@@ -512,6 +514,7 @@ class HttpFrontDoor {
     SamRescanManager *samRescanManager_;
     AppTileManager *appTileManager_;
     EventLoop *eventLoop_;
+    VolumeCeilingEnforcer *volumeCeilingEnforcer_;
     TvAppManager *tvAppManager_ = nullptr;
     mutable std::unique_ptr<ScreensaverControl> screensaverControl_;
     mutable std::once_flag screensaverControlOnce_;

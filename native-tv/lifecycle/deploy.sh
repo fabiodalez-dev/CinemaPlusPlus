@@ -82,7 +82,7 @@ STAGE=/var/lib/tvweb/.deploy     # on the TV; beside the install so moves are re
 FILES="tvwebctl 56-cinemapp-ledstrip 57-cinemapp-service 58-cinemapp-first-app cinemapp-first-app cinemapp-home-key assets/ui.html assets/favicon.svg \
 assets/ui/theme.css assets/ui/ui.css assets/ui/i18n.js assets/ui/core.js assets/ui/theme.js assets/ui/format.js assets/ui/readouts.js \
 assets/ui/server.js assets/ui/controls.js assets/ui/privacy.js assets/ui/lgsettings.js assets/ui/game.js \
-assets/ui/system.js assets/ui/history.js assets/ui/ssh.js assets/ui/screentime.js assets/ui/apps.js assets/ui/install.js assets/ui/home.js assets/ui/tabs.js assets/ui/servicemenu.js \
+assets/ui/system.js assets/ui/history.js assets/ui/ssh.js assets/ui/screentime.js assets/ui/volumelimit.js assets/ui/keyboard.js assets/ui/report.js assets/ui/apps.js assets/ui/install.js assets/ui/home.js assets/ui/tabs.js assets/ui/servicemenu.js \
 assets/ui/oled.js assets/ui/screensavers.js assets/ui/ledstrip.js assets/ui/jellyfin.js assets/ui/weather.js assets/ui/music.js assets/ui/cinemapp-update.js assets/ui/mqtt.js assets/ui/tools.js assets/ui/search-aliases.js assets/ui/search.js assets/ui/main.js \
 assets/dashboard-app/appinfo.json assets/dashboard-app/packageinfo.json \
 assets/dashboard-app/install-app.sh \
