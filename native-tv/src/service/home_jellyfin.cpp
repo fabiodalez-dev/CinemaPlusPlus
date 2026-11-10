@@ -130,7 +130,11 @@ HomeJellyfin::HomeJellyfin(std::string dataRoot, std::string connectionPath, Get
 }
 
 HomeJellyfin::~HomeJellyfin() {
-    stopping_ = true;
+    // Under the mutex the worker waits with, as in HomeDiscover: otherwise the join can wait forever.
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        stopping_ = true;
+    }
     changed_.notify_all();
     if (worker_.joinable()) worker_.join();
 }
