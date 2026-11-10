@@ -5201,6 +5201,8 @@ class DaemonRuntimeTests(unittest.TestCase):
                     "nativetv": (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()})
                 self.assertEqual(backup["lg"]["homePromotion"], False)
                 self.assertEqual(backup["lg"]["soundMode"], "movie")
+                self.assertEqual(backup["lg"]["lgLogo"], True,
+                                 "the Control tab's LG logo switch is part of a backup")
                 # Settings no module was given are saved at their defaults.
                 self.assertEqual(backup["nativetv"], {
                     "history": {"enabled": False},
@@ -5808,7 +5810,8 @@ class DaemonRuntimeTests(unittest.TestCase):
 
                 backup = {
                     "format": "nativetv-backup", "version": 1,
-                    "lg": {"homePromotion": True, "soundMode": "movie", "bogus": 1},
+                    "lg": {"homePromotion": True, "soundMode": "movie", "bogus": 1,
+                           "lgLogo": False},
                     "apps": [{"id": "com.example.alpha", "title": "Alpha"},
                              {"id": "com.example.zed", "title": "Zed"}],
                     "home": {"rows": ["ch", "app", "dev"], "picture": False},
@@ -5819,7 +5822,7 @@ class DaemonRuntimeTests(unittest.TestCase):
                 status, body = post(backup)
                 self.assertEqual(status, 200, body)
                 self.assertEqual(body["lg"], {
-                    "applied": ["homePromotion"], "unchanged": 1,
+                    "applied": ["homePromotion", "lgLogo"], "unchanged": 1,
                     "skipped": [{"id": "bogus", "reason": "absent"}], "failed": []})
                 self.assertEqual(sorted(body["nativetv"]), ["backup.daily", "ntp.server"])
                 self.assertTrue(body["restart"])
@@ -5843,8 +5846,10 @@ class DaemonRuntimeTests(unittest.TestCase):
                 calls = [json.loads(line) for line in details.read_text().splitlines()]
                 written = [call for call in calls if call["uri"] ==
                            "com.webos.service.settings/setSystemSettings"]
-                self.assertEqual(len(written), 1, written)
-                self.assertEqual(written[0]["payload"]["settings"], {"homePromotion": "on"})
+                self.assertEqual([(call["payload"]["category"], call["payload"]["settings"])
+                                  for call in written],
+                                 [("general", {"homePromotion": "on"}),
+                                  ("other", {"lgLogoDisplay": "off"})], written)
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline and not restarted.exists():
                     time.sleep(0.05)
@@ -5857,8 +5862,8 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(status, 200, body)
                 self.assertEqual(body["nativetv"], [])
                 self.assertFalse(body["restart"])
-                # The stand-in TV keeps homePromotion off, so it is written again.
-                self.assertEqual(body["lg"]["applied"], ["homePromotion"])
+                # The stand-in TV keeps homePromotion off and the logo on, so both are written again.
+                self.assertEqual(body["lg"]["applied"], ["homePromotion", "lgLogo"])
                 self.assertEqual(body["lg"]["unchanged"], 1)
                 time.sleep(1)
                 self.assertFalse(restarted.exists())
@@ -6436,6 +6441,7 @@ class DaemonRuntimeTests(unittest.TestCase):
             }))
             assetsRoot = root / "assets"
             shutil.copytree(str(sourceAssets), str(assetsRoot))
+            shutil.copytree(str(sourceAssets.parent / "assets" / "pwa"), str(assetsRoot / "pwa"))
             outside = root / "outside.js"
             outside.write_text("must not be served through an assets symlink")
             (assetsRoot / "ui" / "escape.js").symlink_to(outside)
@@ -6882,6 +6888,27 @@ class DaemonRuntimeTests(unittest.TestCase):
                 self.assertEqual(response.status, 200)
                 self.assertEqual(response.read(), b"")
                 self.assertGreater(int(response.headers.get("Content-Length", "0")), 0)
+
+                # The installable app: the manifest is not kept for a day, and the service worker,
+                # which sits under /assets/pwa/, may control the dashboard at /.
+                response = urlopen("http://127.0.0.1:%d/assets/pwa/manifest.webmanifest" % port, timeout=3)
+                manifest = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(response.headers.get("Content-Type"),
+                                 "application/manifest+json; charset=utf-8")
+                self.assertEqual(response.headers.get("Cache-Control"), "no-cache")
+                self.assertEqual(manifest["start_url"], "/")
+                for icon in manifest["icons"]:
+                    response = urlopen("http://127.0.0.1:%d%s" % (port, icon["src"]), timeout=3)
+                    self.assertEqual(response.headers.get("Content-Type"), "image/png")
+                    self.assertTrue(response.read().startswith(b"\x89PNG"), icon["src"])
+                response = urlopen("http://127.0.0.1:%d/assets/pwa/sw.js" % port, timeout=3)
+                self.assertEqual(response.headers.get("Service-Worker-Allowed"), "/")
+                self.assertEqual(response.headers.get("Content-Type"), "application/javascript")
+                self.assertIn("addEventListener('fetch'", response.read().decode("utf-8"))
+                response = urlopen("http://127.0.0.1:%d/assets/ui/core.js" % port, timeout=3)
+                response.read()
+                self.assertIsNone(response.headers.get("Service-Worker-Allowed"),
+                                  "only the service worker may widen its scope")
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=3)
                 connection.request("GET", "/assets/dashboard.html?tab=apps")

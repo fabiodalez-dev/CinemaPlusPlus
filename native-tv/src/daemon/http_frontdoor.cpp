@@ -12118,7 +12118,7 @@ bool HttpFrontDoor::createBackup(Json &backup, const Json *settingsContext) cons
     }
 
     const std::vector<std::string> sections = {
-        "promotions", "sound", "devices", "hdmi"
+        "promotions", "sound", "devices", "hdmi", "display"
     };
     const Json data = collectLgSettingsData(sections);
     const Json lg = service::lgSettingsResponse(
@@ -16077,7 +16077,7 @@ void HttpFrontDoor::restoreNativeBackupLg(HttpExchange &exchange) const {
     }
 
     const std::vector<std::string> sections = {
-        "promotions", "sound", "devices", "hdmi"
+        "promotions", "sound", "devices", "hdmi", "display"
     };
     const Json data = collectLgSettingsData(sections);
     const Json current = service::lgSettingsResponse(
