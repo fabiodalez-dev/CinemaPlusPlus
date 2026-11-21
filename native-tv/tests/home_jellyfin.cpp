@@ -143,6 +143,43 @@ int main() {
                       .string() == "al:Primary",
               "a song without art of its own has its album's cover");
     }
+    // The server off: one request per refresh, nothing else asked during the pause, the rows
+    // from the cache kept, and back online by itself once the server answers again.
+    {
+        bool up = false;
+        int calls = 0;
+        const auto flaky = [&](const std::string &url, const std::string &auth, std::string &body, long &status,
+                               size_t max) {
+            ++calls;
+            if (!up) {
+                status = 0;
+                return false;
+            }
+            return get(url, auth, body, status, max);
+        };
+        HomeJellyfin jf(dir, dir + "/jellyfin.json", flaky, [&now]() { return now; });
+        check(jf.feed()["rows"].size() > 0, "the rows on disk at once");
+        for (int i = 0; i < 100 && jf.feed()["state"].string() != "offline"; ++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        Json feed = jf.feed();
+        check(feed["state"].string() == "offline", "offline");
+        check(calls == 1, "one request for a whole refresh with the server off");
+        check(feed["rows"].size() > 0 && feed["rows"][0]["key"].string() == "jf-continue", "the last rows kept");
+        std::string bytes;
+        check(!jf.image("fedcba9876543210fedcba9876543210:Primary:640", bytes), "no artwork that is not on the TV");
+        check(jf.search("it f")["items"].size() == 0 && jf.music("", "", 0)["error"].string() == "offline",
+              "search and music answer at once");
+        check(calls == 1, "nothing asked during the pause");
+        check(jf.image(std::string(kUser) + ":Backdrop:1280", bytes) && bytes == "JPEG", "artwork on the TV still shown");
+        // A minute on, the server is back: the next look at Home brings it online again.
+        up = true;
+        now += 61 * 1000;
+        jf.feed();
+        for (int i = 0; i < 100 && jf.feed()["state"].string() != "online"; ++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        check(jf.feed()["state"].string() == "online", "online again without a restart");
+        check(jf.search("it f")["items"].size() == 1, "search works again");
+    }
     // Without a connection: unconfigured.
     {
         HomeJellyfin jf(dir, dir + "/missing.json", get, [&now]() { return now; });

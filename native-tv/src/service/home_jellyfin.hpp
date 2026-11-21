@@ -57,8 +57,14 @@ class HomeJellyfin {
         bool valid() const { return !server.empty() && !userId.empty() && token.size() > 8; }
     };
     Connection readConnection() const;
-    bool getJson(const Connection &c, const std::string &path, Json &out, long &status);
-    Json items(const Connection &c, const std::string &path, long &status);
+    // Every request to the server goes through here. A request that gets no answer at all
+    // (server off, no network) opens a pause of kOfflinePauseMs in which nothing else is
+    // asked: artwork, search and music answer at once from what is on the TV, so a server
+    // that is down never holds the dashboard's workers. `probe` asks even during the pause.
+    bool fetch(const std::string &url, const std::string &authorization, std::string &body, long &status,
+               size_t maxBytes, bool probe = false);
+    bool getJson(const Connection &c, const std::string &path, Json &out, long &status, bool probe = false);
+    Json items(const Connection &c, const std::string &path, long &status, bool probe = false);
     void refresh();
     void workerLoop();
 
@@ -75,6 +81,8 @@ class HomeJellyfin {
     bool loaded_ = false;
     Json cache_;
     int64_t fetchedAtMs_ = 0;
+    // Until when (clock_) the server is treated as unreachable; 0 when it answered last.
+    std::atomic<int64_t> offlineUntilMs_{0};
 };
 
 } // namespace service

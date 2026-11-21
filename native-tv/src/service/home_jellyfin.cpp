@@ -18,6 +18,10 @@ namespace nativetv {
 namespace service {
 namespace {
 constexpr int64_t kStaleMs = 10 * 60 * 1000;
+// With the server unreachable: no request for this long after a failed one, and the rows
+// are asked again this often (not every ten minutes), so Home is back soon after the server.
+constexpr int64_t kOfflinePauseMs = 30 * 1000;
+constexpr int64_t kOfflineRetryMs = 60 * 1000;
 const char *kFields = "Fields=Overview,Genres,ParentId&EnableImageTypes=Backdrop,Primary,Thumb&ImageTypeLimit=1";
 
 int64_t steadyMs() {
@@ -154,10 +158,21 @@ HomeJellyfin::Connection HomeJellyfin::readConnection() const {
     return c;
 }
 
-bool HomeJellyfin::getJson(const Connection &c, const std::string &path, Json &out, long &status) {
+bool HomeJellyfin::fetch(const std::string &url, const std::string &authorization, std::string &body,
+                         long &status, size_t maxBytes, bool probe) {
+    status = 0;
+    if (!probe && clock_() < offlineUntilMs_.load()) return false;
+    const bool ok = get_(url, authorization, body, status, maxBytes);
+    // No HTTP answer at all: the server is off or out of reach. Any status, even an error, is an answer.
+    if (!ok && status == 0) offlineUntilMs_.store(clock_() + kOfflinePauseMs);
+    else offlineUntilMs_.store(0);
+    return ok;
+}
+
+bool HomeJellyfin::getJson(const Connection &c, const std::string &path, Json &out, long &status, bool probe) {
     std::string body;
     status = 0;
-    if (!get_(c.server + path, "MediaBrowser Token=\"" + c.token + "\"", body, status, 4 * 1024 * 1024))
+    if (!fetch(c.server + path, "MediaBrowser Token=\"" + c.token + "\"", body, status, 4 * 1024 * 1024, probe))
         return false;
     if (status != 200) return false;
     try {
@@ -238,10 +253,10 @@ Json HomeJellyfin::mergeContinue(const Json &resume, const Json &nextUp) {
     return out;
 }
 
-Json HomeJellyfin::items(const Connection &c, const std::string &path, long &status) {
+Json HomeJellyfin::items(const Connection &c, const std::string &path, long &status, bool probe) {
     Json doc;
     Json out = Json::array();
-    if (!getJson(c, path, doc, status)) return out;
+    if (!getJson(c, path, doc, status, probe)) return out;
     if (doc["Items"].isArray())
         for (const Json &raw : doc["Items"].items()) out.add(normalizeItem(raw));
     return out;
@@ -257,7 +272,9 @@ void HomeJellyfin::refresh() {
         const std::string user = "/Users/" + c.userId + "/Items";
         const std::string common = std::string("&") + kFields + "&Limit=12";
         long sResume = 0, sNext = 0, sAll = 0, sMovies = 0, sSeries = 0, sMusic = 0;
-        const Json resume = items(c, user + "/Resume?MediaTypes=Video" + common, sResume);
+        // The first request always goes out; when it gets no answer the others are not asked
+        // (one connect timeout per refresh, not seven) and Home keeps the rows it has.
+        const Json resume = items(c, user + "/Resume?MediaTypes=Video" + common, sResume, true);
         const Json next = items(c, "/Shows/NextUp?UserId=" + c.userId + common, sNext);
         const std::string latest = "?Recursive=true&SortBy=DateCreated&SortOrder=Descending";
         const Json all = items(c, user + latest + "&IncludeItemTypes=Movie,Series" + common, sAll);
@@ -329,7 +346,8 @@ Json HomeJellyfin::feed() {
         } catch (...) {
         }
     }
-    const bool stale = !fetchedAtMs_ || clock_() - fetchedAtMs_ > kStaleMs;
+    const bool offline = cache_["state"].isString() && cache_["state"].string() == "offline";
+    const bool stale = !fetchedAtMs_ || clock_() - fetchedAtMs_ > (offline ? kOfflineRetryMs : kStaleMs);
     if (stale && !requested_) {
         requested_ = true;
         changed_.notify_all();
@@ -369,7 +387,7 @@ bool HomeJellyfin::image(const std::string &spec, std::string &bytes) {
     long status = 0;
     const std::string path = "/Items/" + id + "/Images/" + type + (type == "Backdrop" ? "/0" : "") +
                              "?MaxWidth=" + std::to_string(width) + "&Quality=70&Format=jpg";
-    if (!get_(c.server + path, "MediaBrowser Token=\"" + c.token + "\"", bytes, status, 3 * 1024 * 1024) ||
+    if (!fetch(c.server + path, "MediaBrowser Token=\"" + c.token + "\"", bytes, status, 3 * 1024 * 1024) ||
         status != 200 || bytes.empty()) {
         bytes.clear();
         return false;
