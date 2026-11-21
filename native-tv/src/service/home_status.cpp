@@ -20,7 +20,13 @@ Json homeStatusSupported(const std::string &version, bool allowExperimental) {
     }
     const bool on10 = version.compare(0, 3, "10.") == 0;
     const bool on11 = version.compare(0, 3, "11.") == 0;
-    if (on10 || (on11 && allowExperimental)) {
+    // The W22 family (LG 43UQ81003LB and others) reports webOS 7.6.0. On these
+    // TVs the takeover is hook-based: the Home key and a boot activity bring up
+    // Native Tv in place of LG's Home; the file-level manager does not touch LG
+    // layouts. Behind allowExperimentalHome so a plain install never flips a TV
+    // without the user's consent.
+    const bool on7or8 = version.compare(0, 2, "7.") == 0 || version.compare(0, 2, "8.") == 0;
+    if (on10 || (on11 && allowExperimental) || (on7or8 && allowExperimental)) {
         result.set("ok", Json::flag(true));
         result.set("experimental", Json::flag(true));
         return result;
@@ -32,7 +38,7 @@ Json homeStatusSupported(const std::string &version, bool allowExperimental) {
     result.set("webos", version.empty() ? Json() : Json::text(version));
     result.set("reason", Json::text(say::msg(
         "srv.home.untested",
-        "Native Tv Home has been tried only on webOS 9 and 10. This TV runs webOS {version}.",
+        "Native Tv Home has been tried on webOS 9 and 10 natively, and on webOS 7, 8 and 11 as experimental (set allowExperimentalHome). This TV runs webOS {version}.",
         variables)));
     return result;
 }

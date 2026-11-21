@@ -17,7 +17,13 @@ class HomeScreenManager {
                       bool allowExperimental);
 
     bool isWebos9() const;
+    // True on the W22 family (webOS 7.x) and its near siblings (8.x). Takeover
+    // on these TVs is hook-based rather than mount-based.
+    bool isWebos22Family() const;
     bool supportsTakeover(bool allowExperimentalHome) const;
+    // Path to the per-TV data directory the manager was built with, used by
+    // the webOS 22 hook takeover to keep backups and the init.d script.
+    const std::string &dataRoot() const;
     Json state() const;
     Json setPart(const std::string &id, bool shown);
     Json startLayout(bool blank);

@@ -1,6 +1,7 @@
 #include "daemon/home_takeover_lifecycle.hpp"
 
 #include "daemon/home_screen_manager.hpp"
+#include "daemon/home_takeover_hooks.hpp"
 #include "daemon/home_takeover_manager.hpp"
 #include "daemon/luna.hpp"
 #include "daemon/sam_rescan_manager.hpp"
@@ -173,6 +174,15 @@ void HomeTakeoverLifecycleManager::rollbackTakeover(
 Json HomeTakeoverLifecycleManager::takeover(
     bool blankStartLayout, const CommandPolicyContext &context) {
     std::lock_guard<std::mutex> lock(mutex_);
+    // The W22 family (webOS 7.x / 8.x) has no writable Home layout and no
+    // overlayable Flutter assets, so file-level takeover does not apply. Here
+    // the takeover is hook-based: a lginputhook keybind that opens Native Tv
+    // on the Home key and an HBC init.d script that opens it at boot. There
+    // is no SAM reread or LG Home stop to do, and no LG layout to blank.
+    if (homeScreen_.isWebos22Family()) {
+        (void)blankStartLayout;
+        return takeoverViaHooks(std::string(), homeScreen_.dataRoot());
+    }
     const Json mounted = takeover_.takeover();
     if (!mounted["ok"].boolean()) return mounted;
     if (!manifestAccepted(true) && !reread(true, context)) {
@@ -200,6 +210,12 @@ Json HomeTakeoverLifecycleManager::takeover(
 Json HomeTakeoverLifecycleManager::release(
     const CommandPolicyContext &context) {
     std::lock_guard<std::mutex> lock(mutex_);
+    // Hook-based takeover on the W22 family: unwind the two files, that is all
+    // there is to roll back. No LG layout to restore, no SAM reread.
+    if (homeScreen_.isWebos22Family()) {
+        (void)context;
+        return releaseViaHooks(std::string(), homeScreen_.dataRoot());
+    }
     const Json layout = homeScreen_.startLayout(false);
     if (!layout["ok"].boolean())
         return failure(layout["error"].isString()
